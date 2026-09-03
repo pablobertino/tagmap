@@ -1,6 +1,11 @@
 name: collector
 
-# Recolector TagMap en GitHub Actions: un ciclo cada 15 min (Find Hub → Supabase).
+# Recolector TagMap en GitHub Actions, modo "run largo":
+#   cada ejecución corre ~5 h 40 min haciendo un ciclo Find Hub → Supabase cada 15 min,
+#   y al terminar se vuelve a lanzar a sí misma (workflow_dispatch con GITHUB_TOKEN).
+#   El cron queda solo como respaldo: si la cadena se corta, la reinicia (GitHub lo
+#   ejecuta con mucho retraso, por eso no sirve como reloj principal).
+#   La concurrencia evita dos recolectores a la vez; un run pendiente reemplaza al anterior.
 # Secretos requeridos (Settings > Secrets and variables > Actions):
 #   SUPABASE_SERVICE_ROLE_KEY   clave service_role del proyecto Naima
 #   GFMT_SECRETS_B64            contenido de collector/secrets.json en base64
@@ -8,7 +13,7 @@ name: collector
 
 on:
   schedule:
-    - cron: "*/15 * * * *"
+    - cron: "7 */2 * * *"
   workflow_dispatch:
 
 concurrency:
@@ -17,11 +22,15 @@ concurrency:
 
 permissions:
   contents: read
+  actions: write   # para relanzarse
+
+env:
+  RUN_MINUTES: 340   # < 360 (máximo por job); el runner sale limpio antes
 
 jobs:
   collect:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 355
     defaults:
       run:
         working-directory: collector
@@ -31,6 +40,7 @@ jobs:
       GFMT_SECRETS_B64: ${{ secrets.GFMT_SECRETS_B64 }}
       GFMT_REPO_PATH: ./vendor/GoogleFindMyTools
       COLLECTOR_ID: gha-tagmap-1
+      COLLECT_INTERVAL_MINUTES: "15"
       LOG_LEVEL: INFO
     steps:
       - uses: actions/checkout@v4
@@ -55,9 +65,15 @@ jobs:
           pip install -q -r vendor-requirements.lock
           pip install -q -r requirements.txt
 
-      - name: Ciclo del recolector
-        run: python -m tagmap_collector --once
+      - name: Recolector (ciclo cada 15 min durante RUN_MINUTES)
+        run: python -m tagmap_collector --no-health --max-minutes "$RUN_MINUTES"
 
       - name: Limpiar secretos del runner
         if: always()
         run: rm -f vendor/GoogleFindMyTools/Auth/secrets.json
+
+      - name: Relanzar el siguiente run
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run collector.yml --ref "${{ github.ref_name }}" -R "${{ github.repository }}"

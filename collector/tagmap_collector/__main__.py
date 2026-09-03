@@ -36,6 +36,9 @@ def main() -> int:
     ap.add_argument("--once", action="store_true", help="un solo ciclo y salir")
     ap.add_argument("--actions-only", action="store_true", help="solo ejecutar pedidos pendientes (sonar, etc.) y salir")
     ap.add_argument("--health-port", type=int, default=8080)
+    ap.add_argument("--max-minutes", type=float, default=None,
+                    help="correr ciclos durante N minutos y salir limpio (modo GitHub Actions)")
+    ap.add_argument("--no-health", action="store_true", help="no abrir el puerto /health")
     args = ap.parse_args()
 
     settings = Settings.load()
@@ -55,8 +58,9 @@ def main() -> int:
         print(r)
         return 0 if r.ok else 1
 
-    threading.Thread(target=_health_server, args=(args.health_port, collector), daemon=True).start()
-    collector.run_forever()
+    if not args.no_health:
+        threading.Thread(target=_health_server, args=(args.health_port, collector), daemon=True).start()
+    collector.run_forever(max_seconds=args.max_minutes * 60 if args.max_minutes else None)
     return 0
 
 

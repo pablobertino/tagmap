@@ -41,7 +41,9 @@ Migraciones `tagmap_0001` … `tagmap_0005` aplicadas y `supabase/tests/geofence
 
 ## 2. Recolector en GitHub Actions (sin tarjeta)
 
-Repo público https://github.com/pablobertino/tagmap. `.github/workflows/collector.yml` corre `python -m tagmap_collector --once` cada 15 min (~35 s por ciclo).
+Repo público https://github.com/pablobertino/tagmap. `.github/workflows/collector.yml` funciona en modo **run largo**: cada ejecución corre ~5 h 40 min con un ciclo cada 15 min (`--max-minutes 340`) y al terminar se relanza a sí misma con `gh workflow run` (GITHUB_TOKEN, permiso `actions: write`). Motivo: el cron de GitHub en repos gratuitos se ejecutaba cada ~4 h en vez de cada 15 min. El cron (cada 2 h) queda como respaldo para reiniciar la cadena; la concurrencia (`group: collector`) garantiza un solo recolector activo. Minutos: ilimitados en repos públicos.
+
+Si la cadena se corta (p. ej. GitHub cancela un run), basta con Actions → collector → Run workflow.
 
 Secretos del repo (Settings → Secrets and variables → Actions): `SUPABASE_SERVICE_ROLE_KEY`, `GFMT_SECRETS_B64`.
 

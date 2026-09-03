@@ -93,7 +93,11 @@ class Collector:
             self._seen.clear()  # la base ya deduplica; esto es solo ahorro de tráfico
         return out
 
-    def run_forever(self) -> None:
+    def run_forever(self, max_seconds: float | None = None) -> None:
+        """Ciclos hasta recibir señal o hasta agotar max_seconds (sale limpio antes de que
+        GitHub Actions mate el job por timeout)."""
+        deadline = time.monotonic() + max_seconds if max_seconds else None
+
         def _handle(sig, _frame):
             log.info("Señal %s: deteniendo", sig)
             self._stop.set()
@@ -119,5 +123,11 @@ class Collector:
                 backoff = min(backoff + 1, 4)
                 wait = self.interval * backoff
             elapsed = time.monotonic() - started
-            self._stop.wait(max(0, wait - elapsed))
+            wait = max(0, wait - elapsed)
+            if deadline is not None:
+                remaining = deadline - time.monotonic()
+                if remaining < wait + 30:   # no empezar un ciclo que no llega a terminar
+                    log.info("Tiempo máximo alcanzado; salgo limpio")
+                    break
+            self._stop.wait(wait)
         log.info("Recolector detenido")

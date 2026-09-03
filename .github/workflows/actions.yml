@@ -6,8 +6,9 @@ name: actions
 on:
   workflow_dispatch:
 
+# Grupo propio: no debe esperar al recolector (que ahora corre horas seguidas).
 concurrency:
-  group: collector
+  group: actions
   cancel-in-progress: false
 
 permissions:
