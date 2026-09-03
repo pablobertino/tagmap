@@ -1,0 +1,20 @@
+# Changelog — TagMap
+
+## 0.3.0 · 2026-09-03
+- Lugares favoritos (geocercas) creados manteniendo pulsado el mapa: radio 100–2000 m y color.
+- Alarmas de llegada y salida por tag y lugar (pantalla Lugares).
+- Centro de eventos.
+- Notificaciones push vía FCM (requiere Firebase + Edge Function `notify`).
+- Botones de zoom; el encuadre no acerca más de zoom 15,5.
+- Pantalla Acerca de con versión y novedades.
+- Backend: `trackers.kind`, tabla `app_settings` para la Edge Function.
+
+## 0.2.0 · 2026-09-03
+- Login con ver contraseña, recuperación por email (`tagmap://auth`) y registro.
+- Ícono de app; íconos y color por tag.
+- Estilos de mapa: Calles, Claro, Relieve (OpenTopoMap), Satélite (Esri).
+- Rango de fechas a elección y distancia recorrida.
+- Mapa general centrado en el tag más reciente.
+
+## 0.1.0 · 2026-09-02
+- Primera versión: lista, mapa y detalle con historial.

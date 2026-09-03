@@ -43,7 +43,12 @@ class SupabaseSink:
 
     def sync_trackers(self, trackers: list[Tracker]) -> None:
         payload = [
-            {"provider_device_id": t.provider_device_id, "name": t.name, "supports_sound": t.supports_sound}
+            {
+                "provider_device_id": t.provider_device_id,
+                "name": t.name,
+                "supports_sound": t.supports_sound,
+                "kind": "phone" if t.model == "android_phone" else "tag",
+            }
             for t in trackers
         ]
         res = self._rpc("collector_sync_trackers", {"p_collector_id": self.collector_id, "p_trackers": payload})
