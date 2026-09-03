@@ -41,8 +41,15 @@ async function fcmAccessToken(): Promise<string> {
   return cachedToken.value;
 }
 
+/** "19:30 ART": hora local del teléfono que recibe la push, en 24 h y con zona explícita. */
 function fmtTime(iso: string, tz: string): string {
-  return new Intl.DateTimeFormat("es-AR", { hour: "2-digit", minute: "2-digit", timeZone: tz }).format(new Date(iso));
+  try {
+    return new Intl.DateTimeFormat("es-AR", {
+      hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: tz, timeZoneName: "short",
+    }).format(new Date(iso)).replace(",", "");
+  } catch {
+    return fmtTime(iso, "UTC");
+  }
 }
 
 function buildMessage(ev: Record<string, any>, tz: string) {
@@ -68,7 +75,7 @@ Deno.serve(async (req) => {
   const tz = profile?.quiet_hours?.tz ?? "America/Argentina/Buenos_Aires";
 
   const { data: devices } = await supabase
-    .from("mobile_devices").select("id, fcm_token")
+    .from("mobile_devices").select("id, fcm_token, tz")
     .eq("user_id", ev.owner_id).eq("notifications_enabled", true);
 
   if (!devices?.length) {
@@ -76,10 +83,10 @@ Deno.serve(async (req) => {
     return new Response("no devices", { status: 200 });
   }
 
-  const msg = buildMessage(ev, tz);
   const token = await fcmAccessToken();
   let sent = 0;
   for (const d of devices) {
+    const msg = buildMessage(ev, d.tz || tz);   // zona del teléfono; si no la mandó, la del perfil
     const res = await fetch(`https://fcm.googleapis.com/v1/projects/${SA.project_id}/messages:send`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },

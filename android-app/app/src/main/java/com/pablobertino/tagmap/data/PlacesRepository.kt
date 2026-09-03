@@ -85,6 +85,7 @@ class PlacesRepository(private val client: SupabaseClient) {
     suspend fun registerDevice(fcmToken: String, deviceName: String) {
         client.postgrest.rpc("app_register_device", buildJsonObject {
             put("p_fcm_token", fcmToken); put("p_device_name", deviceName)
+            put("p_tz", java.util.TimeZone.getDefault().id)   // la push se muestra en hora local del teléfono
         })
     }
 }

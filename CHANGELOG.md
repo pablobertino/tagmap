@@ -1,5 +1,12 @@
 # Changelog — TagMap
 
+## 0.4.1 — 2026-09-03
+
+- Push operativas con Firebase; hora local del teléfono (24 h, con zona) en cada aviso (`mobile_devices.tz`, migración 0010).
+- Recolector en GitHub Actions en modo run largo: ciclo cada 15 min, se relanza solo; cron de respaldo.
+- Fix: permisos `service_role` en `collector_take_actions`/`finish_action` (0008) y cast a `action_status` (0009).
+- Fix: un fallo en los pedidos ya no aborta el ciclo de posiciones.
+
 ## 0.4.0 · 2026-09-03
 - Identidad visual "Carta náutica" (azul + ámbar) e ícono nuevo; temas elegibles: Carta náutica / Claro / Instrumentos.
 - Estilo de mapa "Noche" (CARTO dark) y colores de etiquetas según estilo.

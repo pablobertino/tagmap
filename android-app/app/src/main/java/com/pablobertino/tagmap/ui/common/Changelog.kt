@@ -4,6 +4,12 @@ package com.pablobertino.tagmap.ui.common
 data class Release(val version: String, val date: String, val changes: List<String>)
 
 val CHANGELOG = listOf(
+    Release("0.4.1", "2026-09-03", listOf(
+        "Notificaciones push operativas (Firebase).",
+        "La hora en las notificaciones es la del teléfono, en 24 h y con zona (ej. 18:30 GMT-4).",
+        "Recolector cada 15 min de verdad (run largo en GitHub Actions).",
+        "Arreglado: hacer sonar quedaba 'en curso' y frenaba al recolector.",
+    )),
     Release("0.4.0", "2026-09-03", listOf(
         "Nueva identidad 'Carta náutica': azul profundo y ámbar, ícono nuevo.",
         "Apariencia elegible en Acerca de: Carta náutica, Claro o Instrumentos.",
