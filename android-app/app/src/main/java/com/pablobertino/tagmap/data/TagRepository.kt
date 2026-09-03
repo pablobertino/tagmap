@@ -1,6 +1,7 @@
 package com.pablobertino.tagmap.data
 
 import io.github.jan.supabase.SupabaseClient
+import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Order
 import kotlinx.serialization.json.buildJsonObject
@@ -52,6 +53,15 @@ class TagRepository(private val client: SupabaseClient) {
             filter { eq("id", id) }
         }
     }
+
+    /** Pide al recolector una acción (hacer sonar, etc.). Devuelve el pedido creado. */
+    suspend fun requestAction(trackerId: String, action: String): ActionRequest =
+        client.postgrest.from("action_requests").insert(
+            ActionRequest(ownerId = client.auth.currentUserOrNull()?.id ?: error("sin sesión"), trackerId = trackerId, action = action)
+        ) { select() }.decodeSingle()
+
+    suspend fun action(id: String): ActionRequest? =
+        client.postgrest.from("action_requests").select { filter { eq("id", id) } }.decodeSingleOrNull()
 
     suspend fun collectors(): List<CollectorStatus> =
         client.postgrest.from("collectors").select().decodeList()

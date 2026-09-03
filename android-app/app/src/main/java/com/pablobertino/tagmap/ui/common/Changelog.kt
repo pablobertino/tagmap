@@ -4,6 +4,9 @@ package com.pablobertino.tagmap.ui.common
 data class Release(val version: String, val date: String, val changes: List<String>)
 
 val CHANGELOG = listOf(
+    Release("0.3.1", "2026-09-03", listOf(
+        "Hacer sonar un tag (ícono de altavoz en el detalle). Tarda ~1 min: pasa por GitHub Actions.",
+    )),
     Release("0.3.0", "2026-09-03", listOf(
         "Lugares favoritos: mantené pulsado el mapa para crear uno, con radio y color.",
         "Alarmas de llegada y salida por tag y lugar (pantalla Lugares).",

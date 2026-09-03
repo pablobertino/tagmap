@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.Duration
 import java.time.LocalDate
@@ -153,6 +154,7 @@ data class DetailUiState(
     val places: List<Place> = emptyList(),
     val loading: Boolean = true,
     val error: String? = null,
+    val soundStatus: String? = null,       // mensaje de progreso de "hacer sonar"
 )
 
 class DetailViewModel(private val c: AppContainer, private val trackerId: String) : ViewModel() {
@@ -194,6 +196,31 @@ class DetailViewModel(private val c: AppContainer, private val trackerId: String
         }
         return out
     }
+
+    /** Hacer sonar (spec §6.3): crea el pedido y sigue su estado ~90 s. */
+    fun playSound(stop: Boolean = false) {
+        viewModelScope.launch {
+            _ui.update { it.copy(soundStatus = "Enviando pedido…") }
+            val req = runCatching { c.tagRepository.requestAction(trackerId, if (stop) "sound_stop" else "sound_start") }
+                .getOrElse { e -> _ui.update { it.copy(soundStatus = "Error: ${friendly(e)}") }; return@launch }
+            var status = "pending"
+            for (i in 1..40) {
+                delay(3000)
+                val a = runCatching { c.tagRepository.action(req.id) }.getOrNull() ?: continue
+                status = a.status
+                _ui.update { it.copy(soundStatus = when (status) {
+                    "pending" -> "Esperando al recolector… ${i * 3}s"
+                    "running" -> "Enviando a Google…"
+                    "done" -> "Listo: ${a.result ?: "pedido aceptado"}. El tag suena si hay un teléfono tuyo cerca."
+                    else -> "Falló: ${a.result ?: "sin detalle"}"
+                }) }
+                if (status == "done" || status == "failed") return@launch
+            }
+            _ui.update { it.copy(soundStatus = "Sin respuesta en 2 min. ¿Está cargado github_token en app_settings?") }
+        }
+    }
+
+    fun clearSoundStatus() = _ui.update { it.copy(soundStatus = null) }
 
     fun update(name: String, icon: String, color: String) {
         viewModelScope.launch {

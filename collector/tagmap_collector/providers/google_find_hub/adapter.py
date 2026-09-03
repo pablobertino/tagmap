@@ -101,6 +101,7 @@ class GoogleFindHubProvider(TrackerProvider):
             from KeyBackup.cloud_key_decryptor import decrypt_aes_gcm
             from NovaApi.ExecuteAction.LocateTracker.decrypt_locations import is_mcu_tracker, retrieve_identity_key
             from NovaApi.ExecuteAction.LocateTracker.location_request import create_location_request
+            from NovaApi.ExecuteAction.PlaySound.sound_request import create_sound_request
             from NovaApi.ListDevices.nbe_list_devices import request_device_list
             from NovaApi.nova_request import nova_request
             from NovaApi.scopes import NOVA_ACTION_API_SCOPE
@@ -117,6 +118,7 @@ class GoogleFindHubProvider(TrackerProvider):
             FcmReceiver=FcmReceiver, fmdn_decrypt=fmdn_decrypt, decrypt_aes_gcm=decrypt_aes_gcm,
             is_mcu_tracker=is_mcu_tracker, retrieve_identity_key=retrieve_identity_key,
             create_location_request=create_location_request, request_device_list=request_device_list,
+            create_sound_request=create_sound_request,
             nova_request=nova_request, NOVA_ACTION_API_SCOPE=NOVA_ACTION_API_SCOPE,
             generate_random_uuid=generate_random_uuid, Common_pb2=Common_pb2, DeviceUpdate_pb2=DeviceUpdate_pb2,
             get_canonic_ids=get_canonic_ids, parse_device_list_protobuf=parse_device_list_protobuf,
@@ -158,8 +160,21 @@ class GoogleFindHubProvider(TrackerProvider):
         return out
 
     def play_sound(self, provider_device_id: str) -> ActionResult:
-        # ADAPT: NovaApi/ExecuteAction/PlaySound existe en el vendor; pendiente validar con Xiaomi Tag (Fase 4).
-        return ActionResult(ok=False, message="pendiente de validar en Fase 4")
+        return self._sound(provider_device_id, start=True)
+
+    def stop_sound(self, provider_device_id: str) -> ActionResult:
+        return self._sound(provider_device_id, start=False)
+
+    def _sound(self, provider_device_id: str, start: bool) -> ActionResult:
+        """ADAPT: NovaApi/ExecuteAction/PlaySound. Google responde 200 si aceptó el pedido;
+        que el tag suene depende de que esté al alcance BLE de un teléfono propio."""
+        v = self._v
+        fcm_token = self._call_auth(self._ensure_fcm)
+        payload = v["create_sound_request"](start, provider_device_id, fcm_token)
+        resp = self._call_auth(v["nova_request"], v["NOVA_ACTION_API_SCOPE"], payload)
+        if resp is None:
+            return ActionResult(ok=False, message="Google rechazó el pedido (ver log [NovaRequest])")
+        return ActionResult(ok=True, message="pedido aceptado por Google")
 
     # --------------------------------------------------------------- internals
 

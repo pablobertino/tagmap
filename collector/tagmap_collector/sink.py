@@ -19,6 +19,8 @@ class Sink(Protocol):
     def sync_trackers(self, trackers: list[Tracker]) -> None: ...
     def ingest_locations(self, locations: list[TrackerLocation]) -> int: ...
     def heartbeat(self, status: str, message: str | None = None) -> None: ...
+    def take_actions(self) -> list[dict]: ...
+    def finish_action(self, action_id: str, ok: bool, result: str | None = None) -> None: ...
 
 
 class TransientError(Exception):
@@ -76,6 +78,13 @@ class SupabaseSink:
         log.info("Enviadas %d posiciones, %d nuevas", len(payload), inserted)
         return inserted
 
+    def take_actions(self) -> list[dict]:
+        res = self._rpc("collector_take_actions", {"p_collector_id": self.collector_id})
+        return list(res.data or [])
+
+    def finish_action(self, action_id: str, ok: bool, result: str | None = None) -> None:
+        self._rpc("collector_finish_action", {"p_id": action_id, "p_ok": ok, "p_result": result})
+
     def heartbeat(self, status: str, message: str | None = None) -> None:
         try:
             self._rpc("collector_heartbeat",
@@ -91,7 +100,16 @@ class MemorySink:
         self.trackers: list[Tracker] = []
         self.locations: list[TrackerLocation] = []
         self.heartbeats: list[tuple[str, str | None]] = []
+        self.actions: list[dict] = []
+        self.finished: list[tuple[str, bool, str | None]] = []
         self._seen: set[tuple] = set()
+
+    def take_actions(self) -> list[dict]:
+        out, self.actions = self.actions, []
+        return out
+
+    def finish_action(self, action_id: str, ok: bool, result: str | None = None) -> None:
+        self.finished.append((action_id, ok, result))
 
     def sync_trackers(self, trackers: list[Tracker]) -> None:
         self.trackers = list(trackers)

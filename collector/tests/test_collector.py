@@ -90,3 +90,18 @@ def test_secrets_validation(tmp_path):
     (repo / "Auth" / "secrets.json").write_text('{"aas_token": "x"}')
     with pytest.raises(ProviderAuthError, match="incompleto"):
         GoogleFindHubProvider(repo_path=repo)
+
+
+def test_process_actions_sound():
+    class SoundProvider(StaticProvider):
+        def play_sound(self, provider_device_id):
+            from tagmap_collector.models import ActionResult
+            return ActionResult(ok=True, message="aceptado")
+
+    s = MemorySink()
+    s.actions = [{"id": "a1", "provider_device_id": "d1", "action": "sound_start"},
+                 {"id": "a2", "provider_device_id": "d1", "action": "sound_stop"}]
+    n = Collector(SoundProvider([]), s, 15).process_actions()
+    assert n == 2
+    assert s.finished[0] == ("a1", True, "aceptado")
+    assert s.finished[1][0] == "a2" and s.finished[1][1] is False   # stop no soportado por StaticProvider

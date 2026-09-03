@@ -27,3 +27,6 @@ class TrackerProvider(ABC):
 
     def play_sound(self, provider_device_id: str) -> ActionResult:
         return ActionResult(ok=False, message="no soportado por este proveedor")
+
+    def stop_sound(self, provider_device_id: str) -> ActionResult:
+        return ActionResult(ok=False, message="no soportado por este proveedor")

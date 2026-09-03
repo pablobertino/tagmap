@@ -34,6 +34,7 @@ def _health_server(port: int, collector: Collector) -> None:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--once", action="store_true", help="un solo ciclo y salir")
+    ap.add_argument("--actions-only", action="store_true", help="solo ejecutar pedidos pendientes (sonar, etc.) y salir")
     ap.add_argument("--health-port", type=int, default=8080)
     args = ap.parse_args()
 
@@ -43,6 +44,11 @@ def main() -> int:
     provider = build_provider(settings)
     sink = SupabaseSink(settings.supabase_url, settings.supabase_service_role_key, settings.collector_id)
     collector = Collector(provider, sink, settings.interval_minutes)
+
+    if args.actions_only:
+        n = collector.process_actions()
+        print(f"acciones procesadas: {n}")
+        return 0
 
     if args.once:
         r = collector.run_once()

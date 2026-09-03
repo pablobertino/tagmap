@@ -33,41 +33,36 @@ Migraciones `tagmap_0001` … `tagmap_0005` aplicadas y `supabase/tests/geofence
      supabase secrets set FCM_SERVICE_ACCOUNT_JSON="$(Get-Content firebase-service-account.json -Raw)"
      supabase functions deploy notify --no-verify-jwt
      ```
-   - SQL Editor:
-     ```sql
-     alter database postgres set app.notify_url = 'https://rlaxxavhzrrrmjrkymlm.supabase.co/functions/v1/notify';
-     alter database postgres set app.notify_secret = '<el mismo NOTIFY_SECRET>';
-     ```
+   - Activar: `update tagmap.app_settings set value = 'true' where key = 'notify_enabled';` (URL y secreto ya están en `app_settings`). Detalle en `FASE3-notificaciones.md`.
 4. **Retención diaria** (opcional): habilitar `pg_cron` y
    ```sql
    select cron.schedule('tagmap_purge', '15 4 * * *', $$select tagmap.purge_old_locations()$$);
    ```
 
-## 2. Recolector en Fly.io
+## 2. Recolector en GitHub Actions (sin tarjeta)
 
-```powershell
-winget install flyctl
-fly auth login
-cd collector
-fly launch --copy-config --no-deploy
-```
+Repo público https://github.com/pablobertino/tagmap. `.github/workflows/collector.yml` corre `python -m tagmap_collector --once` cada 15 min (~35 s por ciclo).
 
-Secretos:
+Secretos del repo (Settings → Secrets and variables → Actions): `SUPABASE_SERVICE_ROLE_KEY`, `GFMT_SECRETS_B64`.
 
-```powershell
-$b64 = [Convert]::ToBase64String([IO.File]::ReadAllBytes("secrets.json"))
-fly secrets set SUPABASE_URL=https://rlaxxavhzrrrmjrkymlm.supabase.co `
-                SUPABASE_SERVICE_ROLE_KEY=<service_role> `
-                GFMT_SECRETS_B64=$b64
-fly deploy
-fly logs
-```
+Verificar: pestaña Actions (círculo verde) y en Supabase `select id, status, last_seen_at from tagmap.collectors;` → `gha-tagmap-1`.
 
-Debe verse `Ciclo ok: N tags, M posiciones, K nuevas` cada 15 min. En Supabase: `select * from tagmap.app_trackers;`.
+Notas:
+- GitHub desactiva los crons tras 60 días sin commits en el repo; cualquier push los reactiva.
+- Cuando venza la autenticación de Google (`status = auth_expired`): reautenticar en Windows (`python main.py` del vendor), regenerar el base64 y actualizar el secreto `GFMT_SECRETS_B64`.
 
-### Cuando venza la autenticación de Google
+### Hacer sonar (workflow `actions.yml`)
 
-`tagmap.collectors.status` pasa a `auth_expired` y se crea un `system_alerts`. Reautenticar en Windows (`python main.py` en el vendor), regenerar `$b64`, `fly secrets set GFMT_SECRETS_B64=$b64`.
+La app inserta en `tagmap.action_requests`; un trigger llama a la API de GitHub (`workflow_dispatch`) y el workflow ejecuta `--actions-only`. Necesita un token:
+
+1. GitHub → Settings → Developer settings → Personal access tokens → **Fine-grained tokens** → Generate: Repository access = *Only select repositories* → `tagmap`; Permissions → Repository → **Actions: Read and write**. Expiración: 1 año.
+2. Supabase → SQL Editor (no pegar el token en otro lado):
+   ```sql
+   insert into tagmap.app_settings (key, value) values ('github_token', 'github_pat_XXXX')
+   on conflict (key) do update set value = excluded.value;
+   ```
+
+Fly.io (`Dockerfile`, `fly.toml`) queda como alternativa si algún día hay tarjeta: recolector siempre encendido, acciones instantáneas.
 
 ## 3. Probar sin Google
 
@@ -84,6 +79,6 @@ Inserta dos tags falsos (`Daniel`, `Mochila`) cerca del Obelisco. Útil para des
 | Servicio | Mensual |
 |---|---|
 | Supabase | ya cubierto por Naima |
-| Fly.io shared-cpu-1x 512 MB | ~US$3 |
+| GitHub Actions (repo público) | US$0 |
 | Firebase FCM | US$0 |
-| Google Maps SDK Android | US$0 (crédito mensual) |
+| Mapas (OpenFreeMap / OpenTopoMap / Esri) | US$0, sin clave |

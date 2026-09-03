@@ -1,5 +1,8 @@
 # Changelog — TagMap
 
+## 0.3.1 · 2026-09-03
+- Hacer sonar un tag desde el detalle (`action_requests` → workflow `actions.yml` → recolector `--actions-only`).
+
 ## 0.3.0 · 2026-09-03
 - Lugares favoritos (geocercas) creados manteniendo pulsado el mapa: radio 100–2000 m y color.
 - Alarmas de llegada y salida por tag y lugar (pantalla Lugares).

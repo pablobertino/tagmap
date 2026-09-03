@@ -1,7 +1,7 @@
 package com.pablobertino.tagmap.ui.common
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DirectionsBike
+import androidx.compose.material.icons.automirrored.filled.DirectionsBike
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Luggage
@@ -21,7 +21,7 @@ enum class TagIcon(val id: String, val label: String, val vector: ImageVector, v
     BAG("bag", "Bolso / mochila", Icons.Default.Work, "🎒"),
     LUGGAGE("luggage", "Valija", Icons.Default.Luggage, "🧳"),
     CAR("car", "Auto", Icons.Default.DirectionsCar, "🚗"),
-    BIKE("bike", "Bici / moto", Icons.Default.DirectionsBike, "🚲"),
+    BIKE("bike", "Bici / moto", Icons.AutoMirrored.Filled.DirectionsBike, "🚲"),
     PET("pet", "Mascota", Icons.Default.Pets, "🐾");
 
     companion object {

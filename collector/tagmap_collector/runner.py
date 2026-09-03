@@ -35,9 +35,31 @@ class Collector:
         self._sync_every = 12               # re-sincronizar lista de trackers cada N ciclos
         self._cycle = 0
 
+    def process_actions(self) -> int:
+        """Ejecuta los pedidos pendientes de la app (hacer sonar, etc.). Devuelve cuántos procesó."""
+        actions = self.sink.take_actions()
+        for a in actions:
+            kind, dev = a.get("action"), a.get("provider_device_id")
+            try:
+                if kind == "sound_start":
+                    r = self.provider.play_sound(dev)
+                elif kind == "sound_stop":
+                    r = self.provider.stop_sound(dev)
+                elif kind == "refresh":
+                    r = type("R", (), {"ok": True, "message": "se consultará en este ciclo"})()
+                else:
+                    r = type("R", (), {"ok": False, "message": f"acción desconocida {kind}"})()
+                self.sink.finish_action(a["id"], bool(r.ok), r.message)
+                log.info("Acción %s para %s: %s (%s)", kind, dev, "ok" if r.ok else "falló", r.message)
+            except Exception as exc:  # noqa: BLE001
+                self.sink.finish_action(a["id"], False, f"{type(exc).__name__}: {exc}")
+                log.exception("Acción %s falló", kind)
+        return len(actions)
+
     def run_once(self) -> CycleResult:
         self._cycle += 1
         try:
+            self.process_actions()
             trackers = self.provider.list_trackers()
             if self._cycle == 1 or self._cycle % self._sync_every == 0:
                 self.sink.sync_trackers(trackers)

@@ -99,3 +99,15 @@ data class AppEvent(
     val isEntry: Boolean get() = eventType == "ENTRY"
     val unread: Boolean get() = status == "CREATED" || status == "SENT"
 }
+
+/** Pedido a ejecutar por el recolector (`tagmap.action_requests`). */
+@Serializable
+data class ActionRequest(
+    val id: String = "",
+    @SerialName("owner_id") val ownerId: String = "",
+    @SerialName("tracker_id") val trackerId: String,
+    val action: String,                    // sound_start | sound_stop | refresh
+    val status: String = "pending",        // pending | running | done | failed
+    val result: String? = null,
+    @SerialName("created_at") val createdAt: String = "",
+)

@@ -24,6 +24,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -36,6 +37,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Snackbar
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -120,6 +122,9 @@ fun TrackerDetailScreen(
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver") } },
                 actions = {
                     MapStyleMenu(MapStyle.byId(styleId)) { vm.setMapStyle(it.id) }
+                    if (t?.kind == "tag") {
+                        IconButton(onClick = { vm.playSound() }) { Icon(Icons.Default.VolumeUp, "Hacer sonar") }
+                    }
                     IconButton(onClick = { editing = true }) { Icon(Icons.Default.Edit, "Editar") }
                     IconButton(onClick = vm::load) { Icon(Icons.Default.Refresh, "Actualizar") }
                 },
@@ -182,6 +187,10 @@ fun TrackerDetailScreen(
                 )
             }
             ui.error?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(16.dp)) }
+            ui.soundStatus?.let {
+                Snackbar(modifier = Modifier.padding(8.dp),
+                    action = { TextButton(onClick = vm::clearSoundStatus) { Text("OK") } }) { Text(it) }
+            }
 
             Text(
                 "Recorrido aproximado · ${ui.points.size} puntos · ${distanceText(ui.distanceM)} en línea recta entre reportes",

@@ -1,0 +1,52 @@
+name: actions
+
+# Ejecuta los pedidos de la app (hacer sonar, etc.). Lo dispara Supabase vía workflow_dispatch
+# cuando se inserta una fila en tagmap.action_requests (trigger dispatch_action_workflow).
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: collector
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: collector
+    env:
+      SUPABASE_URL: https://rlaxxavhzrrrmjrkymlm.supabase.co
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      GFMT_SECRETS_B64: ${{ secrets.GFMT_SECRETS_B64 }}
+      GFMT_REPO_PATH: ./vendor/GoogleFindMyTools
+      COLLECTOR_ID: gha-tagmap-1
+      LOG_LEVEL: INFO
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            collector/requirements.txt
+            collector/vendor.lock
+      - name: Clonar GoogleFindMyTools (commit fijado)
+        run: |
+          REF=$(cat vendor.lock)
+          git clone --quiet https://github.com/leonboe1/GoogleFindMyTools vendor/GoogleFindMyTools
+          git -C vendor/GoogleFindMyTools checkout --quiet "$REF"
+      - name: Dependencias
+        run: |
+          pip install -q -r vendor/GoogleFindMyTools/requirements.txt
+          pip install -q -r requirements.txt
+      - name: Ejecutar pedidos pendientes
+        run: python -m tagmap_collector --actions-only
+      - name: Limpiar secretos del runner
+        if: always()
+        run: rm -f vendor/GoogleFindMyTools/Auth/secrets.json

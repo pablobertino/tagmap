@@ -16,7 +16,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Map
@@ -73,7 +73,7 @@ fun TrackerListScreen(
                     IconButton(onClick = onOpenEvents) { Icon(Icons.Default.Notifications, "Eventos") }
                     IconButton(onClick = vm::refresh) { Icon(Icons.Default.Refresh, "Actualizar") }
                     IconButton(onClick = { about = true }) { Icon(Icons.Default.Info, "Acerca de") }
-                    IconButton(onClick = vm::signOut) { Icon(Icons.Default.Logout, "Salir") }
+                    IconButton(onClick = vm::signOut) { Icon(Icons.AutoMirrored.Filled.Logout, "Salir") }
                 },
             )
         },

@@ -7,7 +7,7 @@ Especificación completa: [ESPECIFICACION_APP_ANDROID_FIND_HUB.md](ESPECIFICACIO
 ## Arquitectura (decisión: todo en la nube)
 
 ```
-Google Find Hub ──> collector/ (Python, Fly.io) ──> Supabase (Postgres + Auth + RLS)
+Google Find Hub ──> collector/ (Python, GitHub Actions cada 15 min) ──> Supabase · schema `tagmap` (proyecto Naima)
                                                         │  trigger evaluate_geofences()
                                                         ├──> supabase/functions/notify (FCM)
                                                         └──> android-app/ (Kotlin, Compose, supabase-kt)
@@ -18,22 +18,26 @@ Cambio respecto a la spec §4.2: **no hay FastAPI**. Supabase (proyecto Naima, s
 ## Estructura
 
 ```
-collector/          Recolector Python (Fase 0 y Fase 1)
-  providers/        Interfaz TrackerProvider + adaptador GoogleFindMyTools
-  phase0/           Scripts de prueba técnica (48-72 h)
+.github/workflows/  collector.yml (cron 15 min) · actions.yml (hacer sonar, disparado por Supabase)
+collector/          Recolector Python: TrackerProvider + adaptador GoogleFindMyTools, phase0/
 supabase/
-  migrations/       Esquema, RLS, RPC, geocercas
+  migrations/       Esquema, RLS, RPC, geocercas, action_requests
   functions/notify  Edge Function → Firebase Cloud Messaging
-android-app/        Fase 2 (pendiente hasta congelar contrato de datos)
-docs/               ADRs y guías
+android-app/        App Kotlin/Compose (MapLibre, supabase-kt)
+docs/               ADRs, guías por fase, contrato de datos
+CHANGELOG.md        Versiones de la app
 ```
 
-## Orden de trabajo
+## Estado
 
-1. **Fase 0** — [docs/FASE0-prueba-tecnica.md](docs/FASE0-prueba-tecnica.md). Obligatoria. Sin esto no se construye la app.
-2. **Fase 1** — Crear proyecto Supabase, aplicar migraciones, desplegar recolector en Fly.io. [docs/FASE1-despliegue.md](docs/FASE1-despliegue.md).
-3. **Fase 2** — App Android.
+| Fase | Estado |
+|---|---|
+| 0 Prueba técnica | Aprobada 2026-09-02 (`docs/FASE0-resultado.md`) |
+| 1 Backend | Supabase (Naima/`tagmap`) + recolector en GitHub Actions (`docs/FASE1-despliegue.md`) |
+| 2 App | v0.3.x: lista, mapa, detalle, historial, lugares |
+| 3 Alarmas | Geocercas y eventos operativos; push pendiente de Firebase (`docs/FASE3-notificaciones.md`) |
+| 4 Mejoras | Hacer sonar implementado (requiere `github_token` en `tagmap.app_settings`) |
 
 ## Seguridad
 
-`collector/secrets.json` y `collector/.env` están en `.gitignore`. Nunca se suben al repo, al APK ni a Supabase. En Fly.io viajan como secretos (`fly secrets set`).
+`collector/secrets.json`, `collector/.env`, `google-services.json` y `keys.txt` están en `.gitignore`. Los secretos del recolector viajan como GitHub Secrets; los de la Edge Function como Supabase Secrets; el PAT de GitHub para "hacer sonar" vive solo en `tagmap.app_settings` (tabla sin acceso para la app).
