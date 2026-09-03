@@ -42,6 +42,7 @@ jobs:
           cache-dependency-path: |
             collector/requirements.txt
             collector/vendor.lock
+            collector/vendor-requirements.lock
 
       - name: Clonar GoogleFindMyTools (commit fijado)
         run: |
@@ -51,7 +52,7 @@ jobs:
 
       - name: Dependencias
         run: |
-          pip install -q -r vendor/GoogleFindMyTools/requirements.txt
+          pip install -q -r vendor-requirements.lock
           pip install -q -r requirements.txt
 
       - name: Ciclo del recolector

@@ -2,6 +2,7 @@ package com.pablobertino.tagmap.ui.map
 
 /** Estilos de mapa sin clave ni facturación. */
 enum class MapStyle(val id: String, val label: String) {
+    NIGHT("night", "Noche"),
     STREETS("streets", "Calles"),
     LIGHT("light", "Claro"),
     TERRAIN("terrain", "Relieve"),
@@ -9,6 +10,11 @@ enum class MapStyle(val id: String, val label: String) {
 
     /** URI de estilo vectorial o JSON inline para estilos raster. */
     fun styleSpec(): StyleSpec = when (this) {
+        NIGHT -> StyleSpec.Json(rasterStyle(
+            tiles = "https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png",
+            attribution = "© OpenStreetMap contributors · © CARTO",
+            maxZoom = 19,
+        ))
         STREETS -> StyleSpec.Uri("https://tiles.openfreemap.org/styles/liberty")
         LIGHT -> StyleSpec.Uri("https://tiles.openfreemap.org/styles/positron")
         TERRAIN -> StyleSpec.Json(rasterStyle(

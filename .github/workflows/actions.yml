@@ -36,6 +36,7 @@ jobs:
           cache-dependency-path: |
             collector/requirements.txt
             collector/vendor.lock
+            collector/vendor-requirements.lock
       - name: Clonar GoogleFindMyTools (commit fijado)
         run: |
           REF=$(cat vendor.lock)
@@ -43,7 +44,7 @@ jobs:
           git -C vendor/GoogleFindMyTools checkout --quiet "$REF"
       - name: Dependencias
         run: |
-          pip install -q -r vendor/GoogleFindMyTools/requirements.txt
+          pip install -q -r vendor-requirements.lock
           pip install -q -r requirements.txt
       - name: Ejecutar pedidos pendientes
         run: python -m tagmap_collector --actions-only

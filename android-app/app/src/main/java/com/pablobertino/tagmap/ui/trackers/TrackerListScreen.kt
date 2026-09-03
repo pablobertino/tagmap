@@ -1,6 +1,7 @@
 package com.pablobertino.tagmap.ui.trackers
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -50,6 +51,9 @@ import com.pablobertino.tagmap.ui.common.parseHexColor
 import com.pablobertino.tagmap.ui.common.ageText
 import com.pablobertino.tagmap.ui.common.statusColor
 import com.pablobertino.tagmap.ui.common.timeText
+import com.pablobertino.tagmap.ui.theme.AppTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.text.font.FontFamily
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,7 +66,8 @@ fun TrackerListScreen(
 ) {
     val ui by vm.ui.collectAsStateWithLifecycle()
     var about by remember { mutableStateOf(false) }
-    if (about) AboutDialog { about = false }
+    val themeId by vm.theme.collectAsStateWithLifecycle()
+    if (about) AboutDialog(AppTheme.byId(themeId), onTheme = { vm.setTheme(it.id) }) { about = false }
 
     Scaffold(
         topBar = {
@@ -118,11 +123,14 @@ fun TrackerCard(t: AppTracker, onClick: () -> Unit) {
     Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp).clickable(onClick = onClick)) {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(contentAlignment = Alignment.BottomEnd) {
-                Icon(
-                    TagIcon.resolve(t.icon, t.kind).vector, null,
-                    tint = parseHexColor(t.color), modifier = Modifier.size(32.dp),
-                )
-                Box(Modifier.size(12.dp).background(statusColor(t.ageMinutes), CircleShape))
+                Box(
+                    Modifier.size(40.dp).background(parseHexColor(t.color).copy(alpha = 0.18f), RoundedCornerShape(12.dp)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(TagIcon.resolve(t.icon, t.kind).vector, null, tint = parseHexColor(t.color), modifier = Modifier.size(22.dp))
+                }
+                Box(Modifier.size(12.dp).background(statusColor(t.ageMinutes), CircleShape)
+                    .border(2.dp, MaterialTheme.colorScheme.surfaceContainer, CircleShape))
             }
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
@@ -133,7 +141,7 @@ fun TrackerCard(t: AppTracker, onClick: () -> Unit) {
                         t.observedAt?.timeText(),
                         accuracyText(t.accuracyM),
                         t.atPlaces?.let { "en $it" },
-                    ).joinToString(" · ")
+                    ).joinToString("  ·  ")
                 } else "Sin posición todavía"
                 Text(sub, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }

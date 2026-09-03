@@ -1,5 +1,10 @@
 # Changelog — TagMap
 
+## 0.4.0 · 2026-09-03
+- Identidad visual "Carta náutica" (azul + ámbar) e ícono nuevo; temas elegibles: Carta náutica / Claro / Instrumentos.
+- Estilo de mapa "Noche" (CARTO dark) y colores de etiquetas según estilo.
+- Pin central en lugares; íconos en cápsula en la lista.
+
 ## 0.3.1 · 2026-09-03
 - Hacer sonar un tag desde el detalle (`action_requests` → workflow `actions.yml` → recolector `--actions-only`).
 

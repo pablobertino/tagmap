@@ -73,6 +73,7 @@ private const val SRC_PATH = "tagmap-path"
 private const val SRC_PATH_GAP = "tagmap-path-gap"
 private const val SRC_ACCURACY = "tagmap-accuracy"
 private const val SRC_PLACES = "tagmap-places"
+private const val SRC_PLACE_CENTERS = "tagmap-place-centers"
 
 /**
  * Mapa MapLibre integrado en Compose. Abstracción `MapProvider` de la spec §5:
@@ -129,7 +130,7 @@ fun TagMapView(
                         if (marker != null && onMarkerClick != null) {
                             onMarkerClick(marker.getStringProperty("id")); return@addOnMapClickListener true
                         }
-                        val place = map.queryRenderedFeatures(screen, "$SRC_PLACES-fill", "$SRC_PLACES-label").firstOrNull()
+                        val place = map.queryRenderedFeatures(screen, "$SRC_PLACE_CENTERS-pin", "$SRC_PLACES-label", "$SRC_PLACES-fill").firstOrNull()
                         if (place != null && onPlaceClick != null) {
                             onPlaceClick(place.getStringProperty("id")); return@addOnMapClickListener true
                         }
@@ -182,11 +183,15 @@ private class MapState {
             is StyleSpec.Uri -> Style.Builder().fromUri(spec.uri)
             is StyleSpec.Json -> Style.Builder().fromJson(spec.json)
         }
-        map.setStyle(builder) { s -> installLayers(s); onLoaded() }
+        map.setStyle(builder) { s -> installLayers(s, dark = style == MapStyle.NIGHT); onLoaded() }
     }
 
-    private fun installLayers(style: Style) {
+    private fun installLayers(style: Style, dark: Boolean) {
+        val text = if (dark) "#E8EEF6" else "#212121"
+        val halo = if (dark) "#0E1A2B" else "#FFFFFF"
+        val pathColor = if (dark) "#F5A524" else "#1E88E5"
         style.addSource(GeoJsonSource(SRC_PLACES))
+        style.addSource(GeoJsonSource(SRC_PLACE_CENTERS))
         style.addSource(GeoJsonSource(SRC_ACCURACY))
         style.addSource(GeoJsonSource(SRC_PATH_GAP))
         style.addSource(GeoJsonSource(SRC_PATH))
@@ -202,15 +207,26 @@ private class MapState {
             PropertyFactory.lineWidth(2f),
             PropertyFactory.lineDasharray(arrayOf(1.5f, 1.5f)),
         ))
-        style.addLayer(SymbolLayer("$SRC_PLACES-label", SRC_PLACES).withProperties(
+        // Pin en el centro del lugar + nombre debajo
+        style.addLayer(CircleLayer("$SRC_PLACE_CENTERS-pin", SRC_PLACE_CENTERS).withProperties(
+            PropertyFactory.circleColor(Expression.get("color")),
+            PropertyFactory.circleRadius(7f),
+            PropertyFactory.circleStrokeColor("#FFFFFF"),
+            PropertyFactory.circleStrokeWidth(2.5f),
+        ))
+        style.addLayer(CircleLayer("$SRC_PLACE_CENTERS-dot", SRC_PLACE_CENTERS).withProperties(
+            PropertyFactory.circleColor("#FFFFFF"),
+            PropertyFactory.circleRadius(2f),
+        ))
+        style.addLayer(SymbolLayer("$SRC_PLACES-label", SRC_PLACE_CENTERS).withProperties(
             PropertyFactory.textField(Expression.get("name")),
             PropertyFactory.textFont(TEXT_FONT),
             PropertyFactory.textSize(12f),
+            PropertyFactory.textOffset(arrayOf(0f, 1.3f)),
             PropertyFactory.textColor(Expression.get("color")),
-            PropertyFactory.textHaloColor("#FFFFFF"),
+            PropertyFactory.textHaloColor(halo),
             PropertyFactory.textHaloWidth(1.5f),
-            PropertyFactory.textAnchor(Property.TEXT_ANCHOR_CENTER),
-            PropertyFactory.symbolPlacement(Property.SYMBOL_PLACEMENT_POINT),
+            PropertyFactory.textAllowOverlap(true),
         ))
 
         // Círculo de precisión (radio en px aproximado por zoom)
@@ -235,22 +251,22 @@ private class MapState {
             PropertyFactory.lineDasharray(arrayOf(2f, 2f)),
         ))
         style.addLayer(LineLayer("$SRC_PATH-line", SRC_PATH).withProperties(
-            PropertyFactory.lineColor("#1E88E5"),
+            PropertyFactory.lineColor(pathColor),
             PropertyFactory.lineWidth(3f),
             PropertyFactory.lineCap(Property.LINE_CAP_ROUND),
             PropertyFactory.lineJoin(Property.LINE_JOIN_ROUND),
         ))
         style.addLayer(CircleLayer("$SRC_PATH-dots", SRC_PATH).withProperties(
-            PropertyFactory.circleColor("#1E88E5"),
+            PropertyFactory.circleColor(pathColor),
             PropertyFactory.circleRadius(3f),
-            PropertyFactory.circleStrokeColor("#FFFFFF"),
+            PropertyFactory.circleStrokeColor(halo),
             PropertyFactory.circleStrokeWidth(1f),
         ))
         style.addLayer(CircleLayer("$SRC_MARKERS-circle", SRC_MARKERS).withProperties(
             PropertyFactory.circleColor(Expression.get("color")),
             PropertyFactory.circleRadius(9f),
             PropertyFactory.circleStrokeColor(
-                Expression.switchCase(Expression.get("stale"), Expression.literal("#F9A825"), Expression.literal("#FFFFFF"))
+                Expression.switchCase(Expression.get("stale"), Expression.literal("#F5A524"), Expression.literal(halo))
             ),
             PropertyFactory.circleStrokeWidth(3f),
         ))
@@ -259,8 +275,8 @@ private class MapState {
             PropertyFactory.textFont(TEXT_FONT),
             PropertyFactory.textSize(12f),
             PropertyFactory.textOffset(arrayOf(0f, 1.6f)),
-            PropertyFactory.textColor("#212121"),
-            PropertyFactory.textHaloColor("#FFFFFF"),
+            PropertyFactory.textColor(text),
+            PropertyFactory.textHaloColor(halo),
             PropertyFactory.textHaloWidth(1.5f),
             PropertyFactory.textAllowOverlap(true),
         ))
@@ -291,6 +307,13 @@ private class MapState {
 
         style.getSourceAs<GeoJsonSource>(SRC_PLACES)?.setGeoJson(FeatureCollection.fromFeatures(places.map { p ->
             Feature.fromGeometry(circlePolygon(p.lat, p.lon, p.radiusM.toDouble())).apply {
+                addStringProperty("id", p.id)
+                addStringProperty("name", p.name)
+                addStringProperty("color", p.colorHex)
+            }
+        }))
+        style.getSourceAs<GeoJsonSource>(SRC_PLACE_CENTERS)?.setGeoJson(FeatureCollection.fromFeatures(places.map { p ->
+            Feature.fromGeometry(Point.fromLngLat(p.lon, p.lat)).apply {
                 addStringProperty("id", p.id)
                 addStringProperty("name", p.name)
                 addStringProperty("color", p.colorHex)

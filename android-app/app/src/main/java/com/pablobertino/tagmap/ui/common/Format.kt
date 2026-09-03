@@ -7,9 +7,9 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-val ColorRecent = Color(0xFF2E7D32)
-val ColorStale = Color(0xFFF9A825)
-val ColorUnknown = Color(0xFF9E9E9E)
+val ColorRecent = Color(0xFF7CE0A3)
+val ColorStale = Color(0xFFF5A524)
+val ColorUnknown = Color(0xFF93A3B8)
 
 /** Umbral reciente/antigua (spec §6.1). Configurable en Fase 3 desde profiles.recent_threshold_minutes. */
 const val RECENT_THRESHOLD_MIN = 30

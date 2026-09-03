@@ -4,6 +4,13 @@ package com.pablobertino.tagmap.ui.common
 data class Release(val version: String, val date: String, val changes: List<String>)
 
 val CHANGELOG = listOf(
+    Release("0.4.0", "2026-09-03", listOf(
+        "Nueva identidad 'Carta náutica': azul profundo y ámbar, ícono nuevo.",
+        "Apariencia elegible en Acerca de: Carta náutica, Claro o Instrumentos.",
+        "Estilo de mapa 'Noche' (CARTO) por defecto en los temas oscuros.",
+        "Pin y nombre en el centro de cada lugar; se puede tocar.",
+        "Íconos de tag en cápsula de color en la lista.",
+    )),
     Release("0.3.1", "2026-09-03", listOf(
         "Hacer sonar un tag (ícono de altavoz en el detalle). Tarda ~1 min: pasa por GitHub Actions.",
     )),

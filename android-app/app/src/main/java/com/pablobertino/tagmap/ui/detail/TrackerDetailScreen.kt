@@ -24,7 +24,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -123,7 +123,7 @@ fun TrackerDetailScreen(
                 actions = {
                     MapStyleMenu(MapStyle.byId(styleId)) { vm.setMapStyle(it.id) }
                     if (t?.kind == "tag") {
-                        IconButton(onClick = { vm.playSound() }) { Icon(Icons.Default.VolumeUp, "Hacer sonar") }
+                        IconButton(onClick = { vm.playSound() }) { Icon(Icons.AutoMirrored.Filled.VolumeUp, "Hacer sonar") }
                     }
                     IconButton(onClick = { editing = true }) { Icon(Icons.Default.Edit, "Editar") }
                     IconButton(onClick = vm::load) { Icon(Icons.Default.Refresh, "Actualizar") }

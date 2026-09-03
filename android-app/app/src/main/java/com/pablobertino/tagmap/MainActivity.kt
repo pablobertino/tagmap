@@ -27,7 +27,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.sp
 import com.pablobertino.tagmap.ui.AppNav
+import com.pablobertino.tagmap.ui.theme.AppTheme
 import com.pablobertino.tagmap.ui.theme.TagMapTheme
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.jan.supabase.auth.handleDeeplinks
 
 class MainActivity : ComponentActivity() {
@@ -47,7 +49,8 @@ class MainActivity : ComponentActivity() {
         TagMapMessagingService.syncToken(container)
         val lastCrash = CrashReporter.consume(this)
         setContent {
-            TagMapTheme {
+            val themeId by container.prefs.theme.collectAsStateWithLifecycle()
+            TagMapTheme(AppTheme.byId(themeId)) {
                 Surface { AppNav(container, recoveryMode) }
                 var crash by remember { mutableStateOf(lastCrash) }
                 crash?.let { text ->

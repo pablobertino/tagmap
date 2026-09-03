@@ -88,6 +88,8 @@ class TrackersViewModel(private val c: AppContainer) : ViewModel() {
     val ui: StateFlow<TrackersUiState> = _ui.asStateFlow()
     val mapStyle: StateFlow<String> = c.prefs.mapStyle
     fun setMapStyle(id: String) = c.prefs.setMapStyle(id)
+    val theme: StateFlow<String> = c.prefs.theme
+    fun setTheme(id: String) = c.prefs.setTheme(id)
 
     init { refresh() }
 
