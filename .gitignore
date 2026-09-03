@@ -1,0 +1,41 @@
+# Secretos — NUNCA subir
+secrets.json
+**/secrets.json
+.env
+**/.env
+*.pem
+*.p12
+firebase-service-account*.json
+google-services.json
+local.properties
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+collector/vendor/GoogleFindMyTools/
+
+# Datos de Fase 0
+collector/phase0/samples/
+
+# Android
+android-app/**/build/
+android-app/.gradle/
+android-app/.idea/
+*.apk
+*.aab
+*.keystore
+*.jks
+
+# Supabase local
+supabase/.branches
+supabase/.temp
+
+# Exportado por el navegador
+*.mhtml
+
+# Notas personales con claves — nunca al repo
+keys.txt
+*.keys.txt

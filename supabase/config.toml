@@ -1,0 +1,6 @@
+# Supabase CLI — solo lo necesario para `supabase db push` y `supabase functions deploy`.
+# Enlazar con: supabase link --project-ref <ref>
+project_id = "rlaxxavhzrrrmjrkymlm"   # Naima; TagMap usa el schema `tagmap`
+
+[functions.notify]
+verify_jwt = false   # la autentica el header x-notify-secret

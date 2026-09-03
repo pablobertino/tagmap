@@ -1,0 +1,31 @@
+# Fly.io — recolector TagMap. `fly launch --copy-config --no-deploy` la primera vez.
+app = "tagmap-collector"
+primary_region = "gru"   # São Paulo; cambiar por "eze" si está disponible
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  COLLECT_INTERVAL_MINUTES = "15"
+  COLLECTOR_ID = "fly-tagmap-1"
+  LOG_LEVEL = "INFO"
+
+# Secretos (no van acá): fly secrets set SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... GFMT_SECRETS_B64=...
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = false     # debe seguir corriendo entre ciclos
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    interval = "60s"
+    timeout = "5s"
+    grace_period = "30s"
+    method = "GET"
+    path = "/health"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
