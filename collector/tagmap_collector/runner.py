@@ -59,7 +59,10 @@ class Collector:
     def run_once(self) -> CycleResult:
         self._cycle += 1
         try:
-            self.process_actions()
+            try:
+                self.process_actions()
+            except Exception:  # noqa: BLE001 — los pedidos no deben frenar la recolección
+                log.exception("Pedidos pendientes fallaron; sigo con las posiciones")
             trackers = self.provider.list_trackers()
             if self._cycle == 1 or self._cycle % self._sync_every == 0:
                 self.sink.sync_trackers(trackers)
