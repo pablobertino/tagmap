@@ -39,3 +39,6 @@ supabase/.temp
 # Notas personales con claves — nunca al repo
 keys.txt
 *.keys.txt
+
+# Credenciales Firebase (nunca subir)
+*firebase-adminsdk*.json
