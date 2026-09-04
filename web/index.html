@@ -1,0 +1,535 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TagMap</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M4 4h13l11 11-13 13L4 17z' fill='%23F5A524'/%3E%3Ccircle cx='10' cy='10' r='2.5' fill='%230E1A2B'/%3E%3C/svg%3E">
+<link href="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+  :root {
+    --navy900:#0E1A2B; --navy800:#13233A; --navy700:#1B3050; --navy600:#274263;
+    --amber:#F5A524; --amber-ink:#2B1A00; --mist:#E8EEF6; --slate:#93A3B8; --mint:#7CE0A3; --coral:#FF7A6B;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { background: var(--navy900); color: var(--mist); font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  a { color: var(--amber); }
+  button, input, select { font: inherit; }
+  button { background: var(--navy700); color: var(--mist); border: 1px solid var(--navy600); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+  button:hover { background: var(--navy600); }
+  button.primary { background: var(--amber); color: var(--amber-ink); border-color: var(--amber); font-weight: 600; }
+  button.chip { border-radius: 999px; padding: 4px 12px; font-size: 13px; }
+  button.chip.on { background: var(--amber); color: var(--amber-ink); border-color: var(--amber); }
+  button.icon { padding: 6px 8px; }
+  input, select { background: var(--navy800); color: var(--mist); border: 1px solid var(--navy600); border-radius: 8px; padding: 7px 10px; }
+  input:focus { outline: 2px solid var(--amber); border-color: transparent; }
+  .muted { color: var(--slate); }
+  .small { font-size: 12px; }
+  .err { color: var(--coral); }
+  .ok { color: var(--mint); }
+  .hidden { display: none !important; }
+
+  /* layout */
+  #login { max-width: 360px; margin: 12vh auto; padding: 24px; background: var(--navy800); border: 1px solid var(--navy700); border-radius: 16px; }
+  #login h1 { margin: 0 0 4px; font-size: 26px; letter-spacing: .5px; }
+  #login form { display: grid; gap: 10px; margin-top: 16px; }
+  #app { display: grid; grid-template-columns: 380px 1fr; height: 100%; }
+  #side { background: var(--navy800); border-right: 1px solid var(--navy700); display: flex; flex-direction: column; min-width: 0; }
+  #topbar { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--navy700); }
+  #topbar .brand { font-weight: 700; font-size: 18px; display: flex; align-items: center; gap: 8px; flex: 1; }
+  #tabs { display: flex; border-bottom: 1px solid var(--navy700); }
+  #tabs button { flex: 1; background: none; border: 0; border-bottom: 2px solid transparent; border-radius: 0; padding: 10px 4px; color: var(--slate); }
+  #tabs button.on { color: var(--amber); border-bottom-color: var(--amber); }
+  #panel { flex: 1; overflow: auto; padding: 10px 12px; }
+  #mapwrap { position: relative; min-width: 0; }
+  #map { position: absolute; inset: 0; }
+  #mapctl { position: absolute; left: 12px; top: 12px; display: flex; flex-direction: column; gap: 6px; z-index: 5; }
+  #mapctl button { width: 40px; height: 40px; font-size: 20px; }
+  #legend { position: absolute; left: 12px; bottom: 28px; z-index: 5; background: rgba(14,26,43,.85); border: 1px solid var(--navy600); border-radius: 10px; padding: 8px 10px; font-size: 12px; max-width: 60%; }
+  .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+
+  .row { display: flex; align-items: center; gap: 10px; }
+  .card { background: var(--navy700); border: 1px solid var(--navy600); border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; cursor: pointer; }
+  .card:hover { border-color: var(--amber); }
+  .card.sel { border-color: var(--amber); box-shadow: 0 0 0 1px var(--amber) inset; }
+  .card .name { font-weight: 600; font-size: 15px; }
+  .badge { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; font-size: 20px; flex: none; position: relative; }
+  .badge i { position: absolute; right: -2px; bottom: -2px; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--navy700); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+  .list { margin: 0; padding: 0; list-style: none; }
+  .list li { padding: 8px 0; border-bottom: 1px solid var(--navy700); }
+  .list li b { display: block; }
+  h3 { margin: 12px 0 6px; font-size: 13px; text-transform: uppercase; letter-spacing: .8px; color: var(--slate); }
+  .toggle { display: inline-flex; align-items: center; gap: 4px; margin-right: 10px; }
+  .kv { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; font-size: 13px; }
+  dialog { background: var(--navy800); color: var(--mist); border: 1px solid var(--navy600); border-radius: 14px; padding: 18px; min-width: 320px; }
+  dialog::backdrop { background: rgba(0,0,0,.55); }
+  dialog form { display: grid; gap: 10px; }
+  .toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--navy700); border: 1px solid var(--amber); border-radius: 10px; padding: 8px 14px; z-index: 50; }
+  @media (max-width: 800px) {
+    #app { grid-template-columns: 1fr; grid-template-rows: 46vh 1fr; }
+    #side { order: 2; border-right: 0; border-top: 1px solid var(--navy700); }
+    #mapwrap { order: 1; }
+    #legend { max-width: 80%; }
+  }
+</style>
+</head>
+<body>
+
+<div id="login">
+  <h1>🏷️ TagMap</h1>
+  <div class="muted">Posiciones de tags Xiaomi vía Google Find Hub</div>
+  <form id="loginForm">
+    <input id="email" type="email" placeholder="Email" autocomplete="username" required>
+    <input id="password" type="password" placeholder="Contraseña" autocomplete="current-password" required>
+    <label class="small"><input type="checkbox" id="showPw"> Ver contraseña</label>
+    <button class="primary" type="submit">Entrar</button>
+    <div id="loginErr" class="err small"></div>
+    <div class="small muted">Las posiciones no son en tiempo real: cada punto es la última detección de la red de Google.</div>
+  </form>
+</div>
+
+<div id="app" class="hidden">
+  <div id="side">
+    <div id="topbar">
+      <div class="brand">🏷️ TagMap <span class="small muted" id="ver"></span></div>
+      <select id="styleSel" title="Estilo de mapa">
+        <option value="night">Noche</option><option value="streets">Calles</option><option value="light">Claro</option>
+        <option value="terrain">Relieve</option><option value="satellite">Satélite</option>
+      </select>
+      <button class="icon" id="refreshBtn" title="Actualizar">⟳</button>
+      <button class="icon" id="logoutBtn" title="Salir">⎋</button>
+    </div>
+    <div id="tabs">
+      <button data-tab="tags" class="on">Tags</button>
+      <button data-tab="places">Lugares</button>
+      <button data-tab="events">Eventos</button>
+      <button data-tab="account">Cuenta</button>
+    </div>
+    <div id="panel"></div>
+  </div>
+  <div id="mapwrap">
+    <div id="map"></div>
+    <div id="mapctl">
+      <button id="zoomIn" title="Acercar">+</button>
+      <button id="zoomOut" title="Alejar">−</button>
+      <button id="fitBtn" title="Ver todo">⤢</button>
+    </div>
+    <div id="legend" class="hidden"></div>
+  </div>
+</div>
+
+<dialog id="dlg"></dialog>
+<div id="toast" class="toast hidden"></div>
+
+<script>
+// ============================================================ config
+const SUPABASE_URL = "https://rlaxxavhzrrrmjrkymlm.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_W8ACK0W--geUC-H67-DGpg_JkT67QAu";   // pública por diseño (RLS protege)
+const VERSION = "web 0.1.0";
+const GAP_HOURS = 3;
+const RECENT_MIN = 60;
+const DAY_COLORS = ["#E53935","#8E24AA","#00ACC1","#FB8C00","#43A047","#3949AB","#6D4C41","#546E7A"];
+const TAG_COLORS = ["#1E88E5","#E53935","#43A047","#FB8C00","#8E24AA","#00ACC1","#6D4C41","#546E7A"];
+const ICONS = { tag:"🏷️", phone:"📱", keys:"🔑", bag:"🎒", bike:"🚲", car:"🚗", pet:"🐾", wallet:"👛", person:"🧑", other:"📍" };
+
+const GLYPHS = "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf";
+const raster = (tiles, attribution, maxzoom) => ({
+  version: 8, glyphs: GLYPHS,
+  sources: { r: { type: "raster", tiles: [tiles], tileSize: 256, maxzoom, attribution } },
+  layers: [{ id: "r", type: "raster", source: "r" }],
+});
+const STYLES = {
+  night: raster("https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png", "© OpenStreetMap © CARTO", 19),
+  streets: "https://tiles.openfreemap.org/styles/liberty",
+  light: "https://tiles.openfreemap.org/styles/positron",
+  terrain: raster("https://tile.opentopomap.org/{z}/{x}/{y}.png", "© OpenStreetMap, SRTM · OpenTopoMap (CC-BY-SA)", 17),
+  satellite: raster("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", "Esri, Maxar, Earthstar Geographics", 19),
+};
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { db: { schema: "tagmap" } });
+
+// ============================================================ estado
+const S = {
+  user: null, trackers: [], places: [], rules: [], events: [], alerts: [], sharedBy: {},
+  tab: "tags", sel: null, range: "today", custom: null, points: [], accMax: null,
+  style: localStorage.getItem("tagmap.style") || "night",
+};
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+const fmtTime = d => new Date(d).toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" });
+const fmtDT = d => new Date(d).toLocaleString("es", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+const fmtDM = d => new Date(d).toLocaleDateString("es", { day: "numeric", month: "numeric" });
+const ageText = m => m == null ? "sin posición" : m < 1 ? "ahora" : m < 60 ? `hace ${m} min` : m < 1440 ? `hace ${Math.floor(m/60)} h` : `hace ${Math.floor(m/1440)} d`;
+const accText = a => a == null ? "±?" : `±${Math.round(a)} m`;
+const statusColor = m => m == null ? "#607D8B" : m <= RECENT_MIN ? "#7CE0A3" : m <= 360 ? "#F5A524" : "#93A3B8";
+const localDay = d => { const x = new Date(d); return `${x.getFullYear()}-${x.getMonth()+1}-${x.getDate()}`; };
+function toast(msg, ms = 3000) { const t = $("#toast"); t.textContent = msg; t.classList.remove("hidden"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.add("hidden"), ms); }
+function friendly(e) {
+  const m = e?.message || String(e);
+  if (/invalid login|invalid_credentials/i.test(m)) return "Email o contraseña incorrectos";
+  if (/PGRST106/.test(m)) return "El schema tagmap no está expuesto";
+  return m.slice(0, 200);
+}
+function haversine(a, b, c, d) { const r = 6371008.8, t = x => x * Math.PI / 180; const dl = t(c - a), dn = t(d - b); const h = Math.sin(dl/2)**2 + Math.cos(t(a))*Math.cos(t(c))*Math.sin(dn/2)**2; return 2*r*Math.asin(Math.sqrt(h)); }
+function distanceM(pts) {
+  let total = 0;
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i-1], b = pts[i];
+    const d = haversine(a.latitude, a.longitude, b.latitude, b.longitude);
+    const noise = (a.accuracy_m ?? 100) + (b.accuracy_m ?? 100);
+    const h = (new Date(b.observed_at) - new Date(a.observed_at)) / 3.6e6;
+    if (d > noise && (h <= 0 || d/1000/h <= 1000)) total += d;
+  }
+  return total;
+}
+const distText = m => m < 1000 ? `${Math.round(m)} m` : m < 1e5 ? `${(m/1000).toFixed(1)} km` : `${Math.round(m/1000)} km`;
+
+// ============================================================ auth
+$("#showPw").onchange = e => $("#password").type = e.target.checked ? "text" : "password";
+$("#loginForm").onsubmit = async e => {
+  e.preventDefault(); $("#loginErr").textContent = "";
+  const { error } = await sb.auth.signInWithPassword({ email: $("#email").value.trim(), password: $("#password").value });
+  if (error) $("#loginErr").textContent = friendly(error);
+};
+$("#logoutBtn").onclick = () => sb.auth.signOut();
+sb.auth.onAuthStateChange((_ev, session) => {
+  S.user = session?.user ?? null;
+  $("#login").classList.toggle("hidden", !!S.user);
+  $("#app").classList.toggle("hidden", !S.user);
+  if (S.user) boot();
+});
+
+// ============================================================ datos
+async function rpc(name, params) { const { data, error } = await sb.rpc(name, params || {}); if (error) throw error; return data; }
+async function loadAll() {
+  const [t, p, r, e, a, sh] = await Promise.all([
+    sb.from("app_trackers").select("*").order("name"),
+    sb.from("places").select("*").order("name"),
+    sb.from("geofence_rules").select("*"),
+    sb.from("app_events").select("*").order("observed_at", { ascending: false }).limit(200),
+    sb.from("system_alerts").select("*").order("created_at", { ascending: false }).limit(100),
+    rpc("app_shared_by").catch(() => []),
+  ]);
+  for (const x of [t, p, r, e, a]) if (x.error) throw x.error;
+  S.trackers = t.data; S.places = p.data; S.rules = r.data; S.events = e.data; S.alerts = a.data;
+  S.sharedBy = Object.fromEntries((sh || []).map(x => [x.tracker_id, x.owner_email]));
+}
+function rangeBounds() {
+  const now = new Date(), start = new Date(now); start.setHours(0, 0, 0, 0);
+  if (S.range === "3d") start.setDate(start.getDate() - 2);
+  if (S.range === "7d") start.setDate(start.getDate() - 6);
+  if (S.range === "custom" && S.custom) {
+    const a = new Date(S.custom.from + "T00:00"), b = new Date(S.custom.to + "T00:00"); b.setDate(b.getDate() + 1);
+    return [a, b];
+  }
+  return [start, now];
+}
+async function loadPoints() {
+  if (!S.sel) { S.points = []; return; }
+  const [from, to] = rangeBounds();
+  const rows = await rpc("app_locations", { p_tracker_id: S.sel, p_from: from.toISOString(), p_to: to.toISOString(), p_accuracy_max: S.accMax, p_limit: 2000 });
+  // sin repetidos consecutivos (< 15 m)
+  const out = [];
+  for (const p of rows) { const l = out[out.length-1]; if (l && haversine(l.latitude, l.longitude, p.latitude, p.longitude) < 15) continue; out.push(p); }
+  S.points = out;
+}
+
+// ============================================================ mapa
+let map, mapReady = false, pendingFit = null;
+function initMap() {
+  map = new maplibregl.Map({ container: "map", style: STYLES[S.style], center: [-58.4, -34.6], zoom: 11, attributionControl: true });
+  map.addControl(new maplibregl.ScaleControl({ unit: "metric" }), "bottom-right");
+  map.on("style.load", () => { addLayers(); mapReady = true; render(); if (pendingFit) { fitAll(); pendingFit = null; } });
+  map.on("click", "tag-circle", e => { const id = e.features[0].properties.id; selectTracker(id); });
+  map.on("click", "place-center", e => { S.tab = "places"; renderPanel(); toast(e.features[0].properties.name); });
+  map.on("contextmenu", e => openPlaceDialog(null, e.lngLat));
+  let pressTimer;
+  map.on("touchstart", e => { pressTimer = setTimeout(() => openPlaceDialog(null, e.lngLat), 700); });
+  map.on("touchend", () => clearTimeout(pressTimer)); map.on("touchmove", () => clearTimeout(pressTimer));
+  $("#zoomIn").onclick = () => map.zoomIn(); $("#zoomOut").onclick = () => map.zoomOut(); $("#fitBtn").onclick = fitAll;
+  $("#styleSel").value = S.style;
+  $("#styleSel").onchange = e => { S.style = e.target.value; localStorage.setItem("tagmap.style", S.style); mapReady = false; map.setStyle(STYLES[S.style]); };
+}
+function addLayers() {
+  const dark = S.style === "night";
+  const text = dark ? "#E8EEF6" : "#1B3050", halo = dark ? "#0E1A2B" : "#FFFFFF";
+  const font = ["Noto Sans Regular"];
+  const empty = { type: "FeatureCollection", features: [] };
+  for (const id of ["places", "place-centers", "acc", "path", "tags"]) map.addSource(id, { type: "geojson", data: empty });
+  map.addLayer({ id: "place-fill", type: "fill", source: "places", paint: { "fill-color": ["get", "color"], "fill-opacity": 0.12 } });
+  map.addLayer({ id: "place-line", type: "line", source: "places", paint: { "line-color": ["get", "color"], "line-width": 2, "line-dasharray": [3, 2] } });
+  map.addLayer({ id: "place-center", type: "circle", source: "place-centers", paint: { "circle-color": ["get", "color"], "circle-radius": 5, "circle-stroke-color": halo, "circle-stroke-width": 2 } });
+  map.addLayer({ id: "place-label", type: "symbol", source: "place-centers", layout: { "text-field": ["get", "name"], "text-font": font, "text-size": 12, "text-offset": [0, 1.2] }, paint: { "text-color": ["get", "color"], "text-halo-color": halo, "text-halo-width": 1.5 } });
+  map.addLayer({ id: "acc", type: "circle", source: "acc", paint: { "circle-color": ["get", "color"], "circle-opacity": 0.12, "circle-stroke-color": ["get", "color"], "circle-stroke-width": 1, "circle-stroke-opacity": 0.5,
+    "circle-radius": ["interpolate", ["exponential", 2], ["zoom"], 10, ["/", ["get", "acc"], 150], 16, ["/", ["get", "acc"], 2.4]] } });
+  map.addLayer({ id: "path-line", type: "line", source: "path", filter: ["==", "$type", "LineString"], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": ["get", "color"], "line-width": 3 } });
+  map.addLayer({ id: "path-dots", type: "circle", source: "path", filter: ["==", "$type", "Point"], paint: { "circle-color": ["get", "color"], "circle-radius": 4, "circle-stroke-color": halo, "circle-stroke-width": 1 } });
+  map.addLayer({ id: "path-time", type: "symbol", source: "path", filter: ["==", "$type", "Point"], minzoom: 12, layout: { "text-field": ["get", "t"], "text-font": font, "text-size": 10, "text-offset": [0.8, 0], "text-anchor": "left", "text-optional": true }, paint: { "text-color": text, "text-halo-color": halo, "text-halo-width": 1.2 } });
+  map.addLayer({ id: "tag-circle", type: "circle", source: "tags", paint: { "circle-color": ["get", "color"], "circle-radius": 9, "circle-stroke-width": 3, "circle-stroke-color": ["case", ["get", "stale"], "#F5A524", halo] } });
+  map.addLayer({ id: "tag-label", type: "symbol", source: "tags", layout: { "text-field": ["get", "label"], "text-font": font, "text-size": 12, "text-offset": [0, 1.6], "text-allow-overlap": true }, paint: { "text-color": text, "text-halo-color": halo, "text-halo-width": 1.5 } });
+  map.on("mouseenter", "tag-circle", () => map.getCanvas().style.cursor = "pointer");
+  map.on("mouseleave", "tag-circle", () => map.getCanvas().style.cursor = "");
+}
+function circlePolygon(lat, lon, r) {
+  const pts = []; for (let i = 0; i <= 64; i++) { const a = i / 64 * 2 * Math.PI; pts.push([lon + r / (111320 * Math.cos(lat * Math.PI / 180)) * Math.cos(a), lat + r / 110574 * Math.sin(a)]); }
+  return { type: "Polygon", coordinates: [pts] };
+}
+function render() {
+  if (!mapReady) return;
+  const shown = S.sel ? S.trackers.filter(t => t.id === S.sel) : S.trackers;
+  const withPos = shown.filter(t => t.latitude != null);
+  map.getSource("tags").setData({ type: "FeatureCollection", features: withPos.map(t => ({ type: "Feature", geometry: { type: "Point", coordinates: [t.longitude, t.latitude] },
+    properties: { id: t.id, label: t.name, color: t.color, stale: (t.age_minutes ?? 1e9) > RECENT_MIN } })) });
+  map.getSource("acc").setData({ type: "FeatureCollection", features: withPos.filter(t => t.accuracy_m > 0).map(t => ({ type: "Feature", geometry: { type: "Point", coordinates: [t.longitude, t.latitude] }, properties: { color: t.color, acc: t.accuracy_m } })) });
+  map.getSource("places").setData({ type: "FeatureCollection", features: S.places.map(p => ({ type: "Feature", geometry: circlePolygon(p.latitude, p.longitude, p.radius_m), properties: { id: p.id, name: p.name, color: p.color } })) });
+  map.getSource("place-centers").setData({ type: "FeatureCollection", features: S.places.map(p => ({ type: "Feature", geometry: { type: "Point", coordinates: [p.longitude, p.latitude] }, properties: { id: p.id, name: p.name, color: p.color } })) });
+
+  // recorrido: un color por día, sin línea en huecos > 3 h
+  const feats = [], t = S.trackers.find(x => x.id === S.sel);
+  const days = [...new Set(S.points.map(p => localDay(p.observed_at)))].reverse();
+  const others = DAY_COLORS.filter(c => c.toLowerCase() !== (t?.color || "").toLowerCase());
+  const dayColor = Object.fromEntries(days.map((d, i) => [d, i === 0 ? (t?.color || DAY_COLORS[0]) : others[(i - 1) % others.length]]));
+  const multi = days.length > 1;
+  S.points.forEach((p, i) => {
+    const color = dayColor[localDay(p.observed_at)];
+    feats.push({ type: "Feature", geometry: { type: "Point", coordinates: [p.longitude, p.latitude] }, properties: { color, t: multi ? fmtDT(p.observed_at) : fmtTime(p.observed_at) } });
+    if (i > 0) {
+      const prev = S.points[i-1];
+      if ((new Date(p.observed_at) - new Date(prev.observed_at)) / 3.6e6 < GAP_HOURS)
+        feats.push({ type: "Feature", geometry: { type: "LineString", coordinates: [[prev.longitude, prev.latitude], [p.longitude, p.latitude]] }, properties: { color } });
+    }
+  });
+  map.getSource("path").setData({ type: "FeatureCollection", features: feats });
+  const lg = $("#legend");
+  if (multi) { lg.innerHTML = days.map(d => `<span class="dot" style="background:${dayColor[d]}"></span>${esc(fmtDM(S.points.find(p => localDay(p.observed_at) === d).observed_at))}&nbsp;&nbsp;`).join(""); lg.classList.remove("hidden"); }
+  else lg.classList.add("hidden");
+}
+function fitAll() {
+  if (!mapReady) { pendingFit = true; return; }
+  const coords = [];
+  const shown = S.sel ? S.trackers.filter(t => t.id === S.sel) : S.trackers;
+  shown.forEach(t => t.latitude != null && coords.push([t.longitude, t.latitude]));
+  S.points.forEach(p => coords.push([p.longitude, p.latitude]));
+  if (!coords.length) return;
+  if (coords.length === 1) { map.flyTo({ center: coords[0], zoom: 15 }); return; }
+  const b = coords.reduce((bb, c) => bb.extend(c), new maplibregl.LngLatBounds(coords[0], coords[0]));
+  map.fitBounds(b, { padding: 60, maxZoom: 16, duration: 600 });
+}
+
+// ============================================================ panel
+$$("#tabs button").forEach(b => b.onclick = () => { S.tab = b.dataset.tab; renderPanel(); });
+$("#refreshBtn").onclick = () => refresh(true);
+async function refresh(fit = false) {
+  try { await loadAll(); await loadPoints(); renderPanel(); render(); if (fit) fitAll(); }
+  catch (e) { toast("Error: " + friendly(e), 6000); }
+}
+async function selectTracker(id) {
+  S.sel = S.sel === id ? null : id; S.tab = "tags";
+  try { await loadPoints(); } catch (e) { toast(friendly(e)); }
+  renderPanel(); render(); fitAll();
+}
+function renderPanel() {
+  $$("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === S.tab));
+  const p = $("#panel");
+  ({ tags: renderTags, places: renderPlaces, events: renderEvents, account: renderAccount })[S.tab](p);
+}
+function trackerCard(t) {
+  const sub = t.latitude != null ? [ageText(t.age_minutes), t.last_observed_at && fmtTime(t.last_observed_at), accText(t.accuracy_m), t.at_places && `en ${t.at_places}`].filter(Boolean).join(" · ") : "Sin posición todavía";
+  return `<div class="card ${S.sel === t.id ? "sel" : ""}" data-id="${t.id}"><div class="row">
+    <div class="badge" style="background:${t.color}2e">${ICONS[t.icon] || ICONS[t.kind] || "🏷️"}<i style="background:${statusColor(t.age_minutes)}"></i></div>
+    <div style="min-width:0;flex:1"><div class="name">${esc(t.name)}${t.is_owner ? "" : ' <span class="small muted">· compartido</span>'}</div><div class="small muted">${esc(sub)}</div></div></div></div>`;
+}
+function renderTags(p) {
+  if (S.sel) return renderDetail(p);
+  const syncAt = S.trackers.map(t => t.last_observed_at).filter(Boolean).sort().pop();
+  p.innerHTML = `<div class="small muted" style="margin-bottom:8px">${S.trackers.length} tags · última detección ${syncAt ? fmtDT(syncAt) : "-"} · las posiciones no son en tiempo real</div>`
+    + (S.trackers.length ? S.trackers.map(trackerCard).join("") : `<div class="muted">No hay tags. Registrá tu cuenta de Google con tagmap-auth o pedí que te compartan uno.</div>`)
+    + `<div class="small muted" style="margin-top:12px">Clic derecho (o mantener pulsado) en el mapa para crear un lugar.</div>`;
+  $$(".card", p).forEach(c => c.onclick = () => selectTracker(c.dataset.id));
+}
+function renderDetail(p) {
+  const t = S.trackers.find(x => x.id === S.sel); if (!t) { S.sel = null; return renderTags(p); }
+  const shares = t.is_owner ? `<div class="small" id="shareLine"></div>` : `<div class="small" style="color:var(--amber)">Compartido por ${esc(S.sharedBy[t.id] || "otro usuario")} · solo lectura; podés crear tus lugares y alarmas</div>`;
+  const chip = (id, label) => `<button class="chip ${S.range === id ? "on" : ""}" data-range="${id}">${label}</button>`;
+  p.innerHTML = `
+    <div class="row" style="margin-bottom:6px"><button class="icon" id="backBtn">←</button>
+      <div class="badge" style="background:${t.color}2e">${ICONS[t.icon] || ICONS[t.kind] || "🏷️"}</div>
+      <div style="flex:1;min-width:0"><div class="name" style="font-size:17px">${esc(t.name)}</div><div class="small muted">${ageText(t.age_minutes)} · ${t.last_observed_at ? fmtDT(t.last_observed_at) : "-"}</div></div>
+      ${t.is_owner ? `<button class="icon" id="shareBtn" title="Compartir">👥</button><button class="icon" id="editBtn" title="Editar">✎</button>` : ""}
+      ${t.is_owner && t.kind === "tag" ? `<button class="icon" id="soundBtn" title="Hacer sonar">🔊</button>` : ""}
+    </div>
+    ${shares}
+    <div class="chips">${chip("today", "Hoy")}${chip("3d", "3 días")}${chip("7d", "7 días")}${chip("custom", S.custom ? `${S.custom.from.slice(5)} – ${S.custom.to.slice(5)}` : "Elegir fechas")}
+      <button class="chip ${S.accMax ? "on" : ""}" id="accBtn">≤150 m</button></div>
+    <div class="kv"><span class="muted">Precisión</span><span>${accText(t.accuracy_m)} · calidad ${esc(t.quality || "-")} · ${t.source === "own_device" ? "el propio equipo" : "red Find Hub"}</span>
+      ${t.at_places ? `<span class="muted">En</span><span>${esc(t.at_places)}</span>` : ""}
+      <span class="muted">Coordenadas</span><span id="coords" style="cursor:pointer" title="Copiar">${t.latitude != null ? `${t.latitude.toFixed(6)}, ${t.longitude.toFixed(6)}` : "-"}</span>
+      ${t.is_owner ? `<span class="muted">Sin señal</span><span>${t.stale_alert_hours ? `avisar a las ${t.stale_alert_hours} h` : "apagado"}</span>` : ""}</div>
+    <div id="soundStatus" class="small ok"></div>
+    <div class="small muted" style="margin:8px 0">${S.points.length} detecciones · ≈${distText(distanceM(S.points))} sumando rectas entre ellas. La red solo reporta cuando pasa un teléfono cerca: no es el camino real. Solo se unen reportes con menos de ${GAP_HOURS} h entre sí. Cada día tiene su color; la hora aparece al acercar.</div>
+    <ul class="list">${[...S.points].reverse().map(x => `<li><b>${fmtDT(x.observed_at)}</b><span class="small muted">${accText(x.accuracy_m)} · ${esc(x.quality || "-")} · ${x.source === "own_device" ? "el propio equipo" : "red Find Hub"}</span></li>`).join("")}</ul>`;
+  $("#backBtn").onclick = () => { S.sel = null; renderPanel(); render(); fitAll(); };
+  $$("[data-range]", p).forEach(b => b.onclick = async () => {
+    if (b.dataset.range === "custom") return openDateDialog();
+    S.range = b.dataset.range; await loadPoints(); renderPanel(); render(); fitAll();
+  });
+  $("#accBtn").onclick = async () => { S.accMax = S.accMax ? null : 150; await loadPoints(); renderPanel(); render(); };
+  $("#coords").onclick = () => { navigator.clipboard?.writeText($("#coords").textContent); toast("Coordenadas copiadas"); };
+  $("#editBtn") && ($("#editBtn").onclick = () => openEditDialog(t));
+  $("#shareBtn") && ($("#shareBtn").onclick = () => openShareDialog(t));
+  $("#soundBtn") && ($("#soundBtn").onclick = () => playSound(t));
+  if (t.is_owner) rpc("app_tracker_shares", { p_tracker_id: t.id }).then(list => { const el = $("#shareLine"); if (el) el.innerHTML = list.length ? `<span style="color:var(--amber)">Compartido con ${list.map(s => esc(s.email)).join(", ")}</span>` : ""; }).catch(() => {});
+}
+async function playSound(t) {
+  const el = $("#soundStatus"); el.textContent = "Enviando pedido…";
+  try {
+    const { data, error } = await sb.from("action_requests").insert({ owner_id: S.user.id, tracker_id: t.id, action: "sound_start" }).select().single();
+    if (error) throw error;
+    for (let i = 1; i <= 40; i++) {
+      await new Promise(r => setTimeout(r, 3000));
+      const { data: a } = await sb.from("action_requests").select("*").eq("id", data.id).single();
+      if (!a) continue;
+      el.textContent = { pending: `Esperando al recolector… ${i*3}s`, running: "Enviando a Google…", done: `Listo: ${a.result || "pedido aceptado"}. El tag suena si hay un teléfono tuyo cerca.` }[a.status] || `Falló: ${a.result || "sin detalle"}`;
+      if (a.status === "done" || a.status === "failed") return;
+    }
+    el.textContent = "Sin respuesta en 2 min.";
+  } catch (e) { el.textContent = "Error: " + friendly(e); }
+}
+
+// ---------------- lugares
+function renderPlaces(p) {
+  p.innerHTML = `<div class="row" style="justify-content:space-between;margin-bottom:8px"><span class="small muted">Clic derecho (o mantener pulsado) en el mapa para crear uno.</span></div>`
+    + (S.places.length ? S.places.map(pl => {
+      const rules = S.rules.filter(r => r.place_id === pl.id);
+      const rows = S.trackers.map(t => { const r = rules.find(x => x.tracker_id === t.id); return `<div class="row small" style="padding:4px 0">
+          <span style="flex:1">${ICONS[t.icon] || "🏷️"} ${esc(t.name)}${r ? ` <span class="muted">· ahora: ${({INSIDE:"dentro",OUTSIDE:"fuera"})[r.current_state] || "?"}</span>` : ""}</span>
+          <label class="toggle"><input type="checkbox" data-rule="entry" data-t="${t.id}" data-p="${pl.id}" ${r?.notify_entry ? "checked" : ""}> Llega</label>
+          <label class="toggle"><input type="checkbox" data-rule="exit" data-t="${t.id}" data-p="${pl.id}" ${r?.notify_exit ? "checked" : ""}> Sale</label></div>`; }).join("");
+      return `<div class="card" style="cursor:default"><div class="row"><span class="dot" style="background:${pl.color};width:14px;height:14px"></span><b style="flex:1">${esc(pl.name)}</b><span class="small muted">${pl.radius_m} m</span>
+        <button class="icon" data-edit="${pl.id}" title="Editar">✎</button><button class="icon" data-goto="${pl.id}" title="Ver en el mapa">◎</button></div>${rows}</div>`;
+    }).join("") : `<div class="muted">Sin lugares todavía.</div>`);
+  $$("[data-edit]", p).forEach(b => b.onclick = () => openPlaceDialog(S.places.find(x => x.id === b.dataset.edit)));
+  $$("[data-goto]", p).forEach(b => b.onclick = () => { const pl = S.places.find(x => x.id === b.dataset.goto); map.flyTo({ center: [pl.longitude, pl.latitude], zoom: 15 }); });
+  $$("[data-rule]", p).forEach(cb => cb.onchange = async () => {
+    const tId = cb.dataset.t, pId = cb.dataset.p;
+    const entry = $(`[data-rule=entry][data-t="${tId}"][data-p="${pId}"]`, p).checked, exit = $(`[data-rule=exit][data-t="${tId}"][data-p="${pId}"]`, p).checked;
+    try { await setRule(tId, pId, entry, exit); await loadAll(); renderPanel(); } catch (e) { toast(friendly(e), 5000); await loadAll(); renderPanel(); }
+  });
+}
+async function setRule(trackerId, placeId, entry, exit) {
+  const ex = S.rules.find(r => r.tracker_id === trackerId && r.place_id === placeId);
+  if (!entry && !exit) { if (ex) { const { error } = await sb.from("geofence_rules").delete().eq("id", ex.id); if (error) throw error; } return; }
+  if (!ex) { const { error } = await sb.from("geofence_rules").insert({ owner_id: S.user.id, tracker_id: trackerId, place_id: placeId, notify_entry: entry, notify_exit: exit }); if (error) throw error; }
+  else { const { error } = await sb.from("geofence_rules").update({ notify_entry: entry, notify_exit: exit, enabled: true }).eq("id", ex.id); if (error) throw error; }
+}
+function openPlaceDialog(pl, lngLat) {
+  const d = $("#dlg"); const isNew = !pl;
+  const lat = pl ? pl.latitude : lngLat.lat, lon = pl ? pl.longitude : lngLat.lng;
+  d.innerHTML = `<form method="dialog"><b>${isNew ? "Nuevo lugar" : "Editar lugar"}</b>
+    <input id="plName" placeholder="Nombre" value="${esc(pl?.name || "")}" required>
+    <label class="small">Radio: <span id="plRadV">${pl?.radius_m || 200}</span> m<br><input type="range" id="plRad" min="50" max="2000" step="10" value="${pl?.radius_m || 200}" style="width:100%"></label>
+    <div class="chips" id="plColors">${TAG_COLORS.map(c => `<span class="dot" data-c="${c}" style="background:${c};width:26px;height:26px;cursor:pointer;outline:${(pl?.color || "#43A047").toLowerCase() === c.toLowerCase() ? "3px solid #fff" : "none"}"></span>`).join("")}</div>
+    <div class="small muted">${lat.toFixed(5)}, ${lon.toFixed(5)}</div>
+    <div class="row" style="justify-content:flex-end">${isNew ? "" : `<button type="button" id="plDel" style="margin-right:auto;color:var(--coral)">Borrar</button>`}<button type="button" id="plCancel">Cancelar</button><button class="primary" id="plSave">Guardar</button></div></form>`;
+  let color = pl?.color || "#43A047";
+  $("#plRad").oninput = e => $("#plRadV").textContent = e.target.value;
+  $$("#plColors .dot").forEach(s => s.onclick = () => { color = s.dataset.c; $$("#plColors .dot").forEach(x => x.style.outline = "none"); s.style.outline = "3px solid #fff"; });
+  $("#plCancel").onclick = () => d.close();
+  $("#plDel") && ($("#plDel").onclick = async () => { if (!confirm(`¿Borrar "${pl.name}" y sus alarmas?`)) return; const { error } = await sb.from("places").delete().eq("id", pl.id); if (error) return toast(friendly(error)); d.close(); refresh(); });
+  $("#plSave").onclick = async e => {
+    e.preventDefault();
+    const row = { name: $("#plName").value.trim(), radius_m: +$("#plRad").value, color, latitude: lat, longitude: lon };
+    if (!row.name) return;
+    const q = isNew ? sb.from("places").insert({ owner_id: S.user.id, ...row }) : sb.from("places").update(row).eq("id", pl.id);
+    const { error } = await q; if (error) return toast(friendly(error), 5000);
+    d.close(); await refresh(); S.tab = "places"; renderPanel();
+  };
+  d.showModal();
+}
+
+// ---------------- eventos
+function renderEvents(p) {
+  const unread = S.events.filter(e => e.status === "CREATED" || e.status === "SENT").map(e => e.id);
+  const unreadA = S.alerts.filter(a => !a.read_at).map(a => a.id);
+  const sup = { cooldown: "muy seguido", muted: "silenciado", schedule: "fuera de horario", quiet_hours: "horas de silencio", notify_disabled: "aviso apagado", no_devices: "sin dispositivo", fcm_failed: "falló el envío" };
+  const kinds = { tracker_stale: "Tag sin señal", auth_expired: "Recolector: sesión de Google vencida", collector_error: "Recolector con error" };
+  p.innerHTML = `<div class="row" style="justify-content:flex-end;margin-bottom:6px"><button id="readAll" ${unread.length + unreadA.length ? "" : "disabled"}>Marcar leídos</button></div>`
+    + (S.alerts.length ? `<h3>Alertas</h3><ul class="list">${S.alerts.map(a => `<li><b style="${a.read_at ? "font-weight:400" : ""}">⚠️ ${esc(kinds[a.kind] || a.kind)}</b><span class="small muted">${esc(a.message || "")} · ${fmtDT(a.created_at)}</span></li>`).join("")}</ul><h3>Llegadas y salidas</h3>` : "")
+    + (S.events.length ? `<ul class="list">${S.events.map(e => `<li><b style="${e.status === "CREATED" || e.status === "SENT" ? "" : "font-weight:400"}">${e.event_type === "ENTRY" ? "→" : "←"} ${esc(e.tracker_name)} ${e.event_type === "ENTRY" ? "llegó a" : "salió de"} ${esc(e.place_name)}</b>
+        <span class="small muted">${fmtDT(e.observed_at)}${e.distance_m != null ? ` · a ${Math.round(e.distance_m)} m del centro` : ""}${e.status === "SUPPRESSED" ? ` · sin aviso (${sup[e.suppress_reason] || e.suppress_reason || "-"})` : ""}</span></li>`).join("")}</ul>`
+      : `<div class="muted">Sin eventos todavía. Creá un lugar y activá "Llega" o "Sale" para algún tag.</div>`);
+  $("#readAll").onclick = async () => { try { if (unread.length) await rpc("app_mark_events_read", { p_event_ids: unread }); if (unreadA.length) await rpc("app_mark_alerts_read", { p_ids: unreadA }); await refresh(); } catch (e) { toast(friendly(e)); } };
+}
+
+// ---------------- cuenta
+async function renderAccount(p) {
+  p.innerHTML = `<div class="kv"><span class="muted">Usuario</span><span>${esc(S.user.email)}</span></div><div id="acc" class="muted" style="margin-top:10px">Cargando…</div>
+    <h3>Cómo registrar tu cuenta de Google</h3><div class="small muted">Una vez, en una PC con Windows y Chrome: ejecutá <b>tagmap-auth</b>, entrá con este usuario, iniciá sesión en Google y confirmá el bloqueo de pantalla del teléfono. Tus dispositivos aparecen en ≤15 min. Si Google vence la sesión, repetilo.</div>
+    <h3>Notificaciones</h3><div class="small muted">Las push llegan a la app Android. Esta web muestra lo mismo en la pestaña Eventos.</div>
+    <div class="small muted" style="margin-top:16px">${VERSION} · <a href="https://github.com/pablobertino/tagmap" target="_blank">código</a></div>`;
+  try {
+    const rows = await rpc("app_google_account");
+    const el = $("#acc"); if (!el) return;
+    if (!rows?.length) { el.innerHTML = `<span class="err">Sin cuenta de Google registrada.</span> Los tags que veas son compartidos por otros.`; return; }
+    const r = rows[0];
+    const st = { ok: `<span class="ok">funcionando</span>`, auth_expired: `<span class="err">sesión de Google vencida — volvé a correr tagmap-auth</span>`, error: `<span class="err">con error</span>` }[r.status] || r.status;
+    el.innerHTML = `<div class="kv"><span class="muted">Cuenta Google</span><span>${esc(r.google_email || "-")}</span><span class="muted">Registrada</span><span>${fmtDT(r.registered_at)} · renovada ${fmtDT(r.updated_at)}</span><span class="muted">Recolector</span><span>${st} · último ciclo ${r.last_seen_at ? fmtDT(r.last_seen_at) : "-"}${r.message ? ` · ${esc(r.message)}` : ""}</span></div>`;
+  } catch (e) { const el = $("#acc"); if (el) el.textContent = friendly(e); }
+}
+
+// ---------------- diálogos varios
+function openDateDialog() {
+  const d = $("#dlg"), today = new Date().toISOString().slice(0, 10);
+  d.innerHTML = `<form method="dialog"><b>Rango de fechas</b><label class="small">Desde <input type="date" id="dFrom" value="${S.custom?.from || today}" max="${today}"></label><label class="small">Hasta <input type="date" id="dTo" value="${S.custom?.to || today}" max="${today}"></label>
+    <div class="row" style="justify-content:flex-end"><button type="button" id="dCancel">Cancelar</button><button class="primary" id="dOk">Ver</button></div></form>`;
+  $("#dCancel").onclick = () => d.close();
+  $("#dOk").onclick = async e => { e.preventDefault(); const from = $("#dFrom").value, to = $("#dTo").value; if (!from || !to) return; S.custom = from <= to ? { from, to } : { from: to, to: from }; S.range = "custom"; d.close(); await loadPoints(); renderPanel(); render(); fitAll(); };
+  d.showModal();
+}
+function openEditDialog(t) {
+  const d = $("#dlg");
+  d.innerHTML = `<form method="dialog"><b>Editar tag</b><input id="eName" value="${esc(t.name)}" required>
+    <div class="small muted">Ícono</div><div class="chips" id="eIcons">${Object.entries(ICONS).map(([k, v]) => `<button type="button" class="chip ${(t.icon || t.kind) === k ? "on" : ""}" data-i="${k}">${v}</button>`).join("")}</div>
+    <div class="small muted">Color</div><div class="chips" id="eColors">${TAG_COLORS.map(c => `<span class="dot" data-c="${c}" style="background:${c};width:26px;height:26px;cursor:pointer;outline:${t.color.toLowerCase() === c.toLowerCase() ? "3px solid #fff" : "none"}"></span>`).join("")}</div>
+    <div class="small muted">Avisar si no reporta en…</div><div class="chips" id="eStale">${[null, 6, 12, 24, 48].map(h => `<button type="button" class="chip ${t.stale_alert_hours == h ? "on" : ""}" data-h="${h ?? ""}">${h ? h + " h" : "Nunca"}</button>`).join("")}</div>
+    <div class="row" style="justify-content:flex-end"><button type="button" id="eCancel">Cancelar</button><button class="primary" id="eSave">Guardar</button></div></form>`;
+  let icon = t.icon || t.kind, color = t.color, stale = t.stale_alert_hours;
+  $$("#eIcons .chip").forEach(b => b.onclick = () => { icon = b.dataset.i; $$("#eIcons .chip").forEach(x => x.classList.remove("on")); b.classList.add("on"); });
+  $$("#eColors .dot").forEach(s => s.onclick = () => { color = s.dataset.c; $$("#eColors .dot").forEach(x => x.style.outline = "none"); s.style.outline = "3px solid #fff"; });
+  $$("#eStale .chip").forEach(b => b.onclick = () => { stale = b.dataset.h ? +b.dataset.h : null; $$("#eStale .chip").forEach(x => x.classList.remove("on")); b.classList.add("on"); });
+  $("#eCancel").onclick = () => d.close();
+  $("#eSave").onclick = async e => { e.preventDefault(); const { error } = await sb.from("trackers").update({ name: $("#eName").value.trim(), icon, color, stale_alert_hours: stale }).eq("id", t.id); if (error) return toast(friendly(error), 5000); d.close(); refresh(); };
+  d.showModal();
+}
+async function openShareDialog(t) {
+  const d = $("#dlg");
+  const draw = async () => {
+    let list = []; try { list = await rpc("app_tracker_shares", { p_tracker_id: t.id }); } catch (e) { toast(friendly(e)); }
+    d.innerHTML = `<form method="dialog"><b>Compartir "${esc(t.name)}"</b><div class="small muted">La otra persona necesita una cuenta en TagMap con ese email. Verá posición e historial y podrá crear sus propias alarmas.</div>
+      <div class="row"><input id="shEmail" type="email" placeholder="Email" style="flex:1"><button type="button" id="shAdd">Agregar</button></div><div id="shErr" class="err small"></div>
+      ${list.length ? `<ul class="list">${list.map(s => `<li class="row"><span style="flex:1">${esc(s.email)}</span><button type="button" class="icon" data-u="${s.user_id}" title="Quitar acceso">✕</button></li>`).join("")}</ul>` : `<div class="small muted">Todavía no lo compartiste con nadie.</div>`}
+      <div class="row" style="justify-content:flex-end"><button type="button" id="shClose">Cerrar</button></div></form>`;
+    $("#shClose").onclick = () => { d.close(); renderPanel(); };
+    $("#shAdd").onclick = async () => { try { await rpc("app_share_tracker", { p_tracker_id: t.id, p_email: $("#shEmail").value.trim() }); await draw(); } catch (e) { $("#shErr").textContent = friendly(e); } };
+    $$("[data-u]", d).forEach(b => b.onclick = async () => { try { await rpc("app_unshare_tracker", { p_tracker_id: t.id, p_user_id: b.dataset.u }); await draw(); } catch (e) { toast(friendly(e)); } });
+  };
+  await draw(); d.showModal();
+}
+
+// ============================================================ arranque
+let booted = false;
+async function boot() {
+  $("#ver").textContent = VERSION;
+  try { await rpc("ensure_profile"); } catch (_) {}
+  if (!booted) { booted = true; initMap(); }
+  await refresh(true);
+  setInterval(() => { if (S.user && document.visibilityState === "visible") refresh(false); }, 60000);
+}
+</script>
+</body>
+</html>

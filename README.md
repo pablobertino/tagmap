@@ -24,7 +24,8 @@ supabase/
   migrations/       Esquema, RLS, RPC, geocercas, action_requests
   functions/notify  Edge Function → Firebase Cloud Messaging
 android-app/        App Kotlin/Compose (MapLibre, supabase-kt)
-docs/               ADRs, guías por fase, contrato de datos
+web/                Interfaz web (un solo index.html: supabase-js + MapLibre GL JS) → GitHub Pages
+docs/               ADRs, guías por fase, contrato de datos, MANUAL-MULTIUSUARIO.md (alta de personas, tagmap-auth, compartir)
 CHANGELOG.md        Versiones de la app
 ```
 
@@ -41,7 +42,7 @@ CHANGELOG.md        Versiones de la app
 ## Pendientes (orden tentativo)
 
 1. ~~Compartir tags con otros usuarios~~ — hecho en 0.5.0.
-2. **Interfaz web** para ver todo desde el navegador (mapa, historial, lugares, eventos). Misma base Supabase y misma auth; candidatos: SPA estática (MapLibre GL JS) hospedada gratis en GitHub Pages.
+2. ~~Interfaz web~~ — hecha (web 0.1.0): https://pablobertino.github.io/tagmap/ (mapa, historial por días, lugares y alarmas, eventos, compartir, estado de cuenta). Se publica sola con cada push a `web/`.
 3. ~~Multi-cuenta de Google~~ — hecho: cada usuario registra su cuenta con `tagmap-auth` (Vault en Supabase); ver `docs/FASE1-despliegue.md`.
 
 ## Seguridad

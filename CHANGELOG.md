@@ -1,5 +1,10 @@
 # Changelog — TagMap
 
+## web 0.1.0 — 2026-09-04
+
+- Interfaz web en `web/index.html` (sin build: supabase-js + MapLibre GL JS desde CDN), publicada en GitHub Pages por `.github/workflows/pages.yml`.
+- Login, lista de tags, mapa general, detalle con historial (Hoy / 3 / 7 días / fechas, un color por día, sin línea en huecos > 3 h, hora por punto), lugares con radio/color y alarmas Llega/Sale, eventos y alertas, compartir, editar tag (nombre, ícono, color, sin señal), hacer sonar, estado de la cuenta de Google. Estilos de mapa: Noche, Calles, Claro, Relieve, Satélite. Crear lugar: clic derecho / mantener pulsado.
+
 ## 0.5.0 — 2026-09-03
 
 - Compartir tags con otros usuarios (`tracker_shares`, migración 0011): RPC `app_share_tracker` / `app_unshare_tracker` / `app_tracker_shares` / `app_shared_by`; `app_trackers.is_owner`.
