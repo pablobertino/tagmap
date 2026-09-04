@@ -1,5 +1,11 @@
 # Changelog — TagMap
 
+## 0.5.0 — 2026-09-03
+
+- Compartir tags con otros usuarios (`tracker_shares`, migración 0011): RPC `app_share_tracker` / `app_unshare_tracker` / `app_tracker_shares` / `app_shared_by`; `app_trackers.is_owner`.
+- RLS: invitados leen tracker y posiciones; crean reglas sobre tags visibles con sus propios lugares; "en lugares" se calcula con los lugares de quien consulta.
+- App: diálogo Compartir (dueño), aviso "compartido por" y acciones ocultas para invitados.
+
 ## 0.4.1 — 2026-09-03
 
 - Push operativas con Firebase; hora local del teléfono (24 h, con zona) en cada aviso (`mobile_devices.tz`, migración 0010).

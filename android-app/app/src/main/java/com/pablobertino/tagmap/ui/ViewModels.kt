@@ -12,6 +12,7 @@ import com.pablobertino.tagmap.data.AppTracker
 import com.pablobertino.tagmap.data.CollectorStatus
 import com.pablobertino.tagmap.data.LocationPoint
 import com.pablobertino.tagmap.data.Place
+import com.pablobertino.tagmap.data.TrackerShare
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -157,6 +158,9 @@ data class DetailUiState(
     val loading: Boolean = true,
     val error: String? = null,
     val soundStatus: String? = null,       // mensaje de progreso de "hacer sonar"
+    val shares: List<TrackerShare> = emptyList(),   // invitados (solo si soy dueño)
+    val shareError: String? = null,
+    val sharedBy: String? = null,          // email del dueño si el tag es compartido conmigo
 )
 
 class DetailViewModel(private val c: AppContainer, private val trackerId: String) : ViewModel() {
@@ -229,6 +233,39 @@ class DetailViewModel(private val c: AppContainer, private val trackerId: String
             runCatching { c.tagRepository.updateTracker(trackerId, name.trim(), icon, color) }.onSuccess { load() }
         }
     }
+
+    // ------------------------------------------------- compartir
+
+    fun loadShares() {
+        viewModelScope.launch {
+            if (_ui.value.tracker?.isOwner == false) {
+                val by = runCatching { c.tagRepository.sharedBy() }.getOrDefault(emptyList())
+                _ui.update { it.copy(sharedBy = by.firstOrNull { s -> s.trackerId == trackerId }?.ownerEmail) }
+            } else {
+                runCatching { c.tagRepository.shares(trackerId) }
+                    .onSuccess { list -> _ui.update { it.copy(shares = list, shareError = null) } }
+                    .onFailure { e -> _ui.update { it.copy(shareError = friendly(e)) } }
+            }
+        }
+    }
+
+    fun share(email: String) {
+        viewModelScope.launch {
+            runCatching { c.tagRepository.share(trackerId, email.trim()) }
+                .onSuccess { loadShares() }
+                .onFailure { e -> _ui.update { it.copy(shareError = friendly(e)) } }
+        }
+    }
+
+    fun unshare(userId: String?) {
+        viewModelScope.launch {
+            runCatching { c.tagRepository.unshare(trackerId, userId) }
+                .onSuccess { loadShares() }
+                .onFailure { e -> _ui.update { it.copy(shareError = friendly(e)) } }
+        }
+    }
+
+    fun clearShareError() = _ui.update { it.copy(shareError = null) }
 
     companion object {
         fun factory(trackerId: String) = viewModelFactory { initializer { DetailViewModel(container, trackerId) } }

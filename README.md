@@ -34,13 +34,13 @@ CHANGELOG.md        Versiones de la app
 |---|---|
 | 0 Prueba técnica | Aprobada 2026-09-02 (`docs/FASE0-resultado.md`) |
 | 1 Backend | Supabase (Naima/`tagmap`) + recolector en GitHub Actions (`docs/FASE1-despliegue.md`) |
-| 2 App | v0.4.x: lista, mapa, detalle, historial, lugares, temas |
+| 2 App | v0.5.x: lista, mapa, detalle, historial, lugares, temas, compartir |
 | 3 Alarmas | Geocercas, eventos y push por Firebase operativos (`docs/FASE3-notificaciones.md`) |
 | 4 Mejoras | Hacer sonar implementado (requiere `github_token` en `tagmap.app_settings`) |
 
 ## Pendientes (orden tentativo)
 
-1. **Compartir tags con otros usuarios** (familia): el dueño elige qué tag ve cada cuenta; el invitado ve posición e historial y define sus propias alarmas. Requiere tabla `tracker_shares` + RLS.
+1. ~~Compartir tags con otros usuarios~~ — hecho en 0.5.0.
 2. **Interfaz web** para ver todo desde el navegador (mapa, historial, lugares, eventos). Misma base Supabase y misma auth; candidatos: SPA estática (MapLibre GL JS) hospedada gratis en GitHub Pages.
 3. **Multi-cuenta de Google** en el recolector: cada usuario con sus propios tags de Find Hub (credenciales por usuario, que vencen por separado).
 

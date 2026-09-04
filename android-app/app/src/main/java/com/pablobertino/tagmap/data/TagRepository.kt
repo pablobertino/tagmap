@@ -63,6 +63,24 @@ class TagRepository(private val client: SupabaseClient) {
     suspend fun action(id: String): ActionRequest? =
         client.postgrest.from("action_requests").select { filter { eq("id", id) } }.decodeSingleOrNull()
 
+    // ------------------------------------------------- compartir
+
+    suspend fun shares(trackerId: String): List<TrackerShare> =
+        client.postgrest.rpc("app_tracker_shares", buildJsonObject { put("p_tracker_id", trackerId) }).decodeList()
+
+    suspend fun share(trackerId: String, email: String) {
+        client.postgrest.rpc("app_share_tracker", buildJsonObject { put("p_tracker_id", trackerId); put("p_email", email) })
+    }
+
+    /** userId null = el invitado se quita a sí mismo. */
+    suspend fun unshare(trackerId: String, userId: String? = null) {
+        client.postgrest.rpc("app_unshare_tracker", buildJsonObject {
+            put("p_tracker_id", trackerId); if (userId != null) put("p_user_id", userId)
+        })
+    }
+
+    suspend fun sharedBy(): List<SharedBy> = client.postgrest.rpc("app_shared_by").decodeList()
+
     suspend fun collectors(): List<CollectorStatus> =
         client.postgrest.from("collectors").select().decodeList()
 }

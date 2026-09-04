@@ -24,6 +24,7 @@ data class AppTracker(
     @SerialName("last_received_at") val lastReceivedAt: String? = null,
     @SerialName("age_minutes") val ageMinutes: Int? = null,
     @SerialName("at_places") val atPlaces: String? = null,
+    @SerialName("is_owner") val isOwner: Boolean = true,   // false = tag compartido conmigo
 ) {
     val hasLocation: Boolean get() = latitude != null && longitude != null
     val observedAt: OffsetDateTime? get() = lastObservedAt?.let { runCatching { OffsetDateTime.parse(it) }.getOrNull() }
@@ -99,6 +100,21 @@ data class AppEvent(
     val isEntry: Boolean get() = eventType == "ENTRY"
     val unread: Boolean get() = status == "CREATED" || status == "SENT"
 }
+
+/** Invitado con acceso a un tag (`tagmap.app_tracker_shares`). */
+@Serializable
+data class TrackerShare(
+    @SerialName("user_id") val userId: String,
+    val email: String,
+    @SerialName("created_at") val createdAt: String = "",
+)
+
+/** Quién me compartió cada tag (`tagmap.app_shared_by`). */
+@Serializable
+data class SharedBy(
+    @SerialName("tracker_id") val trackerId: String,
+    @SerialName("owner_email") val ownerEmail: String,
+)
 
 /** Pedido a ejecutar por el recolector (`tagmap.action_requests`). */
 @Serializable

@@ -94,7 +94,10 @@ fun TrackerListScreen(
                     TrackerCard(t, onClick = { onOpenTracker(t.id) })
                 }
                 if (!ui.loading && ui.trackers.isEmpty() && ui.error == null) {
-                    item { Text("Todavía no hay tags sincronizados.", Modifier.padding(16.dp)) }
+                    item {
+                        Text("No hay tags para mostrar.\n\nSi otra persona tiene los tags, pedile que los comparta con tu email desde el detalle del tag (ícono Compartir).",
+                            Modifier.padding(16.dp))
+                    }
                 }
             }
             if (ui.loading) CircularProgressIndicator(Modifier.align(Alignment.Center))
@@ -134,7 +137,7 @@ fun TrackerCard(t: AppTracker, onClick: () -> Unit) {
             }
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
-                Text(t.name, style = MaterialTheme.typography.titleMedium)
+                Text(if (t.isOwner) t.name else "${t.name}  ·  compartido", style = MaterialTheme.typography.titleMedium)
                 val sub = if (t.hasLocation) {
                     listOfNotNull(
                         ageText(t.ageMinutes),

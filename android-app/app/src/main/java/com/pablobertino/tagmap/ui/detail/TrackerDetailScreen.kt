@@ -26,6 +26,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePickerDialog
@@ -44,6 +46,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDateRangePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -98,7 +101,10 @@ fun TrackerDetailScreen(
     val ctx = LocalContext.current
     var editing by remember { mutableStateOf(false) }
     var pickingDates by remember { mutableStateOf(false) }
+    var sharing by remember { mutableStateOf(false) }
     val t = ui.tracker
+    val isOwner = t?.isOwner != false
+    LaunchedEffect(t?.id, t?.isOwner) { if (t != null) vm.loadShares() }
 
     val path = ui.points.mapIndexed { i, p ->
         val gap = i > 0 && Duration.between(ui.points[i - 1].observed, p.observed).toHours() >= GAP_HOURS
@@ -122,10 +128,13 @@ fun TrackerDetailScreen(
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver") } },
                 actions = {
                     MapStyleMenu(MapStyle.byId(styleId)) { vm.setMapStyle(it.id) }
-                    if (t?.kind == "tag") {
+                    if (isOwner && t?.kind == "tag") {
                         IconButton(onClick = { vm.playSound() }) { Icon(Icons.AutoMirrored.Filled.VolumeUp, "Hacer sonar") }
                     }
-                    IconButton(onClick = { editing = true }) { Icon(Icons.Default.Edit, "Editar") }
+                    if (isOwner) {
+                        IconButton(onClick = { sharing = true }) { Icon(Icons.Default.Share, "Compartir") }
+                        IconButton(onClick = { editing = true }) { Icon(Icons.Default.Edit, "Editar") }
+                    }
                     IconButton(onClick = vm::load) { Icon(Icons.Default.Refresh, "Actualizar") }
                 },
             )
@@ -186,6 +195,19 @@ fun TrackerDetailScreen(
                     },
                 )
             }
+            if (!isOwner) {
+                Text(
+                    "Compartido por ${ui.sharedBy ?: "otro usuario"} · solo lectura; podés crear tus lugares y alarmas",
+                    style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.tertiary,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                )
+            } else if (ui.shares.isNotEmpty()) {
+                Text(
+                    "Compartido con ${ui.shares.joinToString { it.email }}",
+                    style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.tertiary,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp).clickable { sharing = true },
+                )
+            }
             ui.error?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(16.dp)) }
             ui.soundStatus?.let {
                 Snackbar(modifier = Modifier.padding(8.dp),
@@ -221,6 +243,36 @@ fun TrackerDetailScreen(
         ) {
             DateRangePicker(state = state, title = { Text("Rango de fechas", Modifier.padding(16.dp)) }, showModeToggle = false)
         }
+    }
+
+    if (sharing && t != null) {
+        var email by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { sharing = false; vm.clearShareError() },
+            title = { Text("Compartir \"${t.name}\"") },
+            text = {
+                Column {
+                    Text("La otra persona necesita una cuenta en TagMap con ese email. Verá posición e historial y podrá crear sus propias alarmas.",
+                        style = MaterialTheme.typography.bodySmall)
+                    Spacer(Modifier.height(8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email") },
+                            singleLine = true, modifier = Modifier.weight(1f))
+                        TextButton(enabled = email.contains("@"), onClick = { vm.share(email); email = "" }) { Text("Agregar") }
+                    }
+                    ui.shareError?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+                    Spacer(Modifier.height(8.dp))
+                    if (ui.shares.isEmpty()) Text("Todavía no lo compartiste con nadie.", style = MaterialTheme.typography.bodySmall)
+                    ui.shares.forEach { sh ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(sh.email, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                            IconButton(onClick = { vm.unshare(sh.userId) }) { Icon(Icons.Default.Close, "Quitar acceso") }
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { sharing = false; vm.clearShareError() }) { Text("Cerrar") } },
+        )
     }
 
     if (editing && t != null) {

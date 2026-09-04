@@ -53,3 +53,10 @@ Suscribirse a `postgres_changes` en `locations` (INSERT) y `geofence_events` (IN
 ## Canales Android (spec §8)
 
 `arrivals`, `departures`, `stale_trackers`, `system`. La Edge Function envía `channel_id` en `android.notification`.
+
+## Adenda 0.5.0 — compartir tags
+
+- `app_trackers` suma la columna final `is_owner boolean`; `at_places` se calcula con los lugares de quien consulta.
+- `tracker_shares(tracker_id, user_id, owner_id, created_at)`: solo lectura para dueño e invitado; escritura vía RPC.
+- RPC (`authenticated`): `app_share_tracker(p_tracker_id, p_email) → uuid`, `app_unshare_tracker(p_tracker_id, p_user_id default null)`, `app_tracker_shares(p_tracker_id) → (user_id, email, created_at)`, `app_shared_by() → (tracker_id, owner_email)`.
+- Invitado: SELECT en `trackers`/`locations` de tags compartidos; INSERT en `geofence_rules` sobre tags visibles con lugares propios. Sin UPDATE de tracker, sin `action_requests`, sin borrar historial.
