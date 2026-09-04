@@ -42,7 +42,7 @@ CHANGELOG.md        Versiones de la app
 
 1. ~~Compartir tags con otros usuarios~~ — hecho en 0.5.0.
 2. **Interfaz web** para ver todo desde el navegador (mapa, historial, lugares, eventos). Misma base Supabase y misma auth; candidatos: SPA estática (MapLibre GL JS) hospedada gratis en GitHub Pages.
-3. **Multi-cuenta de Google** en el recolector: cada usuario con sus propios tags de Find Hub (credenciales por usuario, que vencen por separado).
+3. ~~Multi-cuenta de Google~~ — hecho: cada usuario registra su cuenta con `tagmap-auth` (Vault en Supabase); ver `docs/FASE1-despliegue.md`.
 
 ## Seguridad
 

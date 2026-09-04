@@ -37,7 +37,8 @@ jobs:
     env:
       SUPABASE_URL: https://rlaxxavhzrrrmjrkymlm.supabase.co
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-      GFMT_SECRETS_B64: ${{ secrets.GFMT_SECRETS_B64 }}
+      GFMT_SECRETS_B64: ${{ secrets.GFMT_SECRETS_B64 }}      # cuenta única (compatibilidad)
+      GFMT_ACCOUNTS_B64: ${{ secrets.GFMT_ACCOUNTS_B64 }}    # varias cuentas; si existe, manda
       GFMT_REPO_PATH: ./vendor/GoogleFindMyTools
       COLLECTOR_ID: gha-tagmap-1
       COLLECT_INTERVAL_MINUTES: "15"
@@ -66,7 +67,7 @@ jobs:
           pip install -q -r requirements.txt
 
       - name: Recolector (ciclo cada 15 min durante RUN_MINUTES)
-        run: python -m tagmap_collector --no-health --max-minutes "$RUN_MINUTES"
+        run: python -m tagmap_collector.multi --max-minutes "$RUN_MINUTES"
 
       - name: Limpiar secretos del runner
         if: always()

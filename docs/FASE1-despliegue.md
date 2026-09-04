@@ -45,13 +45,29 @@ Repo público https://github.com/pablobertino/tagmap. `.github/workflows/collect
 
 Si la cadena se corta (p. ej. GitHub cancela un run), basta con Actions → collector → Run workflow.
 
-Secretos del repo (Settings → Secrets and variables → Actions): `SUPABASE_SERVICE_ROLE_KEY`, `GFMT_SECRETS_B64`.
+Secretos del repo (Settings → Secrets and variables → Actions): `SUPABASE_SERVICE_ROLE_KEY` (obligatorio); `GFMT_SECRETS_B64` / `GFMT_ACCOUNTS_B64` solo como respaldo (las cuentas normales viven en Supabase, ver abajo).
 
 Verificar: pestaña Actions (círculo verde) y en Supabase `select id, status, last_seen_at from tagmap.collectors;` → `gha-tagmap-1`.
 
 Notas:
 - GitHub desactiva los crons tras 60 días sin commits en el repo; cualquier push los reactiva.
-- Cuando venza la autenticación de Google (`status = auth_expired`): reautenticar en Windows (`python main.py` del vendor), regenerar el base64 y actualizar el secreto `GFMT_SECRETS_B64`.
+- Cuando venza la autenticación de Google (`status = auth_expired`): el usuario vuelve a correr `tagmap-auth` (ver abajo).
+
+### Varias cuentas de Google (una por usuario de TagMap) — autoservicio
+
+El recolector corre `python -m tagmap_collector.multi`: una cuenta de Google por subproceso, en secuencia. Las cuentas viven en Supabase (`tagmap.google_accounts`, secreto cifrado en **Vault**), las registra cada usuario y el recolector las recarga en cada ciclo. No hay que tocar GitHub para sumar personas.
+
+**Para el usuario nuevo** (una vez, en cualquier PC con Windows y Google Chrome):
+
+1. Que exista su usuario de TagMap (Supabase → Authentication → Users → Add user, *Auto confirm*).
+2. Ejecutar `tagmap-auth.exe` (o `python -m tagmap_auth` desde `collector\` con el venv activado). Pide email/contraseña de TagMap, abre Chrome dos veces (login de Google + bloqueo de pantalla del teléfono para las claves de Find Hub), verifica que la cuenta responde y sube `secrets.json` cifrado. Lo borra de la PC al terminar.
+3. En ≤15 min sus dispositivos aparecen en su app. Puede compartirlos con el botón Compartir.
+
+Cuando Google vence la sesión, su fila en `collectors` pasa a `auth_expired`, le llega la alerta y repite el paso 2. `tagmap-auth --status` muestra el estado; `--remove` borra la cuenta; `--file secrets.json` sube un archivo ya generado (útil para migrar la cuenta original sin abrir Chrome).
+
+**Generar el .exe** (en tu PC, una vez por versión): `collector\build_tagmap_auth.ps1` → `collector\dist\tagmap-auth.exe` (~80 MB). Repartilo por el medio que quieras; no contiene secretos (solo la URL y la clave pública de Supabase).
+
+Respaldo manual (sin Vault): secreto de GitHub `GFMT_ACCOUNTS_B64` generado con `phase0\pack_accounts.py`; o `GFMT_SECRETS_B64` + `COLLECTOR_ID` para una sola cuenta. Solo se usan si Supabase no devuelve cuentas.
 
 ### Hacer sonar (workflow `actions.yml`)
 

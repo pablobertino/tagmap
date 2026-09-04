@@ -42,3 +42,12 @@ keys.txt
 
 # Credenciales Firebase (nunca subir)
 *firebase-adminsdk*.json
+
+# cuentas empaquetadas para GFMT_ACCOUNTS_B64
+accounts.b64
+secrets_*.json
+
+# PyInstaller
+collector/build/
+collector/dist/
+*.spec

@@ -67,3 +67,9 @@ Suscribirse a `postgres_changes` en `locations` (INSERT) y `geofence_events` (IN
 - `system_alerts.tracker_id` nuevo. Kinds: `tracker_stale`, `collector_error`, `auth_expired`. RPC `app_mark_alerts_read(uuid[])`.
 - `check_stale_trackers()` (service_role) se ejecuta dentro de `collector_heartbeat`: una alerta por período de silencio (`trackers.stale_alerted_for` = observed_at ya avisado).
 - Push: trigger `system_alerts_notify` → `notify` con `{"alert_id"}`; canal Android `stale_trackers` / `system`.
+
+## Adenda 0.5.0 — cuentas de Google autoservicio
+
+- `google_accounts(owner_id pk, collector_id unique → collectors, google_email, secret_id → vault.secrets, registered_at, updated_at)`. El usuario solo lee sus columnas no sensibles.
+- RPC `authenticated`: `app_register_google_account(p_secrets jsonb) → collector_id` (valida las 5 claves, crea/renueva el secreto en Vault, reutiliza o crea `collectors` `gha-*`, pone `status='ok'`); `app_remove_google_account()`; `app_google_account() → (collector_id, google_email, registered_at, updated_at, status, last_seen_at, message)`.
+- RPC `service_role`: `collector_list_accounts() → (collector_id, secrets jsonb)` descifrado desde `vault.decrypted_secrets`.

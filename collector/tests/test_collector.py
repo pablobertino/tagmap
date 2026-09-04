@@ -105,3 +105,40 @@ def test_process_actions_sound():
     assert n == 2
     assert s.finished[0] == ("a1", True, "aceptado")
     assert s.finished[1][0] == "a2" and s.finished[1][1] is False   # stop no soportado por StaticProvider
+
+
+# ----------------------------------------------------------------- multi-cuenta
+
+def test_load_accounts_multi_and_single():
+    import base64, json
+    from tagmap_collector.multi import load_accounts
+    sec = {k: "x" for k in ("fcm_credentials", "username", "aas_token", "shared_key", "owner_key")}
+    b64 = base64.b64encode(json.dumps([{"collector_id": "a-1", "secrets": sec}, {"collector_id": "b-1", "secrets": sec}]).encode()).decode()
+    accs = load_accounts({"GFMT_ACCOUNTS_B64": b64})
+    assert [a.collector_id for a in accs] == ["a-1", "b-1"]
+    assert json.loads(base64.b64decode(accs[0].secrets_b64)) == sec
+    single = load_accounts({"GFMT_SECRETS_B64": "abc", "COLLECTOR_ID": "solo"})
+    assert single[0].collector_id == "solo" and single[0].secrets_b64 == "abc"
+    import pytest
+    with pytest.raises(ValueError):
+        load_accounts({})
+    dup = base64.b64encode(json.dumps([{"collector_id": "a", "secrets": sec}, {"collector_id": "a", "secrets": sec}]).encode()).decode()
+    with pytest.raises(ValueError):
+        load_accounts({"GFMT_ACCOUNTS_B64": dup})
+
+
+def test_load_accounts_prefers_supabase(monkeypatch):
+    import base64, json
+    from tagmap_collector import multi
+    sec = {k: "x" for k in ("fcm_credentials", "username", "aas_token", "shared_key", "owner_key")}
+    monkeypatch.setattr(multi, "load_accounts_from_supabase", lambda url, key: [multi.Account("db-1", "zzz")])
+    accs = multi.load_accounts({"SUPABASE_URL": "u", "SUPABASE_SERVICE_ROLE_KEY": "k", "GFMT_SECRETS_B64": "abc"})
+    assert [a.collector_id for a in accs] == ["db-1"]
+    # sin cuentas en la base → cae a env
+    monkeypatch.setattr(multi, "load_accounts_from_supabase", lambda url, key: [])
+    accs = multi.load_accounts({"SUPABASE_URL": "u", "SUPABASE_SERVICE_ROLE_KEY": "k", "GFMT_SECRETS_B64": "abc", "COLLECTOR_ID": "solo"})
+    assert accs[0].collector_id == "solo"
+    # error en la base → cae a env sin romper
+    def boom(url, key): raise RuntimeError("x")
+    monkeypatch.setattr(multi, "load_accounts_from_supabase", boom)
+    assert multi.load_accounts({"SUPABASE_URL": "u", "SUPABASE_SERVICE_ROLE_KEY": "k", "GFMT_SECRETS_B64": "abc"})[0].secrets_b64 == "abc"
