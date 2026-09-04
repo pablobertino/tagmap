@@ -131,12 +131,15 @@ sealed class HistoryRange(val label: String) {
     data object Week : HistoryRange("7 días")
     data class Custom(val from: LocalDate, val to: LocalDate) : HistoryRange("Elegir…")
 
+    /** Días de calendario locales: "Hoy" = desde las 00:00 de hoy; "3 días" = hoy y los 2 anteriores; etc. */
     fun bounds(zone: ZoneId = ZoneId.systemDefault()): Pair<OffsetDateTime, OffsetDateTime> {
         val now = OffsetDateTime.now(ZoneOffset.UTC)
+        val today = LocalDate.now(zone)
+        fun since(days: Long) = today.minusDays(days - 1).atStartOfDay(zone).toOffsetDateTime() to now
         return when (this) {
-            Today -> now.minusDays(1) to now
-            Three -> now.minusDays(3) to now
-            Week -> now.minusDays(7) to now
+            Today -> since(1)
+            Three -> since(3)
+            Week -> since(7)
             is Custom -> from.atStartOfDay(zone).toOffsetDateTime() to
                 to.plusDays(1).atStartOfDay(zone).toOffsetDateTime()
         }

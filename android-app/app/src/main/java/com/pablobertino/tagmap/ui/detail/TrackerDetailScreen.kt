@@ -107,9 +107,17 @@ fun TrackerDetailScreen(
     val isOwner = t?.isOwner != false
     LaunchedEffect(t?.id, t?.isOwner) { if (t != null) vm.loadShares() }
 
+    val multiDay = ui.points.size > 1 &&
+        ui.points.first().observed.atZoneSameInstant(java.time.ZoneId.systemDefault()).toLocalDate() !=
+        ui.points.last().observed.atZoneSameInstant(java.time.ZoneId.systemDefault()).toLocalDate()
     val path = ui.points.mapIndexed { i, p ->
         val gap = i > 0 && Duration.between(ui.points[i - 1].observed, p.observed).toHours() >= GAP_HOURS
-        MapPathPoint(p.latitude, p.longitude, gap)
+        val local = p.observed.atZoneSameInstant(java.time.ZoneId.systemDefault())
+        MapPathPoint(
+            p.latitude, p.longitude, gap,
+            label = local.format(if (multiDay) dmHmFmt else hmFmt),
+            age = if (ui.points.size > 1) 1f - i.toFloat() / (ui.points.size - 1) else 0f,
+        )
     }
     val marker = t?.takeIf { it.hasLocation }?.let {
         MapMarker(it.id, it.name, it.latitude!!, it.longitude!!, it.color, it.accuracyM,
@@ -216,8 +224,14 @@ fun TrackerDetailScreen(
             }
 
             Text(
-                "Recorrido aproximado · ${ui.points.size} puntos · ${distanceText(ui.distanceM)} en línea recta entre reportes",
-                style = MaterialTheme.typography.labelMedium,
+                buildString {
+                    append("${ui.points.size} detecciones · ≈${distanceText(ui.distanceM)} sumando líneas rectas entre ellas.\n")
+                    append("La red solo reporta cuando pasa un teléfono cerca: no es el camino real. ")
+                    append("Línea llena = menos de ${GAP_HOURS} h entre reportes; punteada = hueco mayor. ")
+                    append("Puntos pálidos = más viejos; la hora aparece al acercar el mapa.")
+                },
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
             )
             LazyColumn(Modifier.fillMaxSize()) {
@@ -342,5 +356,7 @@ private fun PointRow(p: LocationPoint) {
 }
 
 private val dmFmt = DateTimeFormatter.ofPattern("d/M")
+private val hmFmt = DateTimeFormatter.ofPattern("HH:mm")
+private val dmHmFmt = DateTimeFormatter.ofPattern("d/M HH:mm")
 private fun LocalDate.dm(): String = format(dmFmt)
 private fun Long.toLocalDate(): LocalDate = Instant.ofEpochMilli(this).atOffset(ZoneOffset.UTC).toLocalDate()

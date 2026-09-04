@@ -54,7 +54,11 @@ data class MapMarker(
 )
 
 /** Punto de recorrido (spec §6.4). */
-data class MapPathPoint(val lat: Double, val lon: Double, val gapBefore: Boolean)
+data class MapPathPoint(
+    val lat: Double, val lon: Double, val gapBefore: Boolean,
+    val label: String = "",        // hora del reporte, se muestra junto al punto
+    val age: Float = 0f,           // 0 = más nuevo … 1 = más viejo del rango (sombreado)
+)
 
 /** Lugar favorito / geocerca (spec §6.5). */
 data class MapPlace(val id: String, val name: String, val lat: Double, val lon: Double, val radiusM: Int, val colorHex: String)
@@ -257,11 +261,28 @@ private class MapState {
             PropertyFactory.lineJoin(Property.LINE_JOIN_ROUND),
         ))
         style.addLayer(CircleLayer("$SRC_PATH-dots", SRC_PATH).withProperties(
+            // los puntos viejos se ven más pálidos; el más nuevo, lleno
             PropertyFactory.circleColor(pathColor),
-            PropertyFactory.circleRadius(3f),
+            PropertyFactory.circleOpacity(Expression.interpolate(
+                Expression.linear(), Expression.coalesce(Expression.get("age"), Expression.literal(0f)),
+                Expression.stop(0f, 1f), Expression.stop(1f, 0.35f),
+            )),
+            PropertyFactory.circleRadius(4f),
             PropertyFactory.circleStrokeColor(halo),
             PropertyFactory.circleStrokeWidth(1f),
         ))
+        style.addLayer(SymbolLayer("$SRC_PATH-time", SRC_PATH).withProperties(
+            PropertyFactory.textField(Expression.get("t")),
+            PropertyFactory.textFont(TEXT_FONT),
+            PropertyFactory.textSize(10f),
+            PropertyFactory.textOffset(arrayOf(0.8f, 0f)),
+            PropertyFactory.textAnchor(Property.TEXT_ANCHOR_LEFT),
+            PropertyFactory.textColor(text),
+            PropertyFactory.textHaloColor(halo),
+            PropertyFactory.textHaloWidth(1.2f),
+            PropertyFactory.textAllowOverlap(false),
+            PropertyFactory.textOptional(true),
+        ).apply { minZoom = 12f })
         style.addLayer(CircleLayer("$SRC_MARKERS-circle", SRC_MARKERS).withProperties(
             PropertyFactory.circleColor(Expression.get("color")),
             PropertyFactory.circleRadius(9f),
@@ -326,7 +347,12 @@ private class MapState {
             val line = LineString.fromLngLats(listOf(Point.fromLngLat(a.lon, a.lat), Point.fromLngLat(b.lon, b.lat)))
             (if (b.gapBefore) gap else solid).add(Feature.fromGeometry(line))
         }
-        val dots = path.map { Feature.fromGeometry(Point.fromLngLat(it.lon, it.lat)) }
+        val dots = path.map { p ->
+            Feature.fromGeometry(Point.fromLngLat(p.lon, p.lat)).apply {
+                addStringProperty("t", p.label)
+                addNumberProperty("age", p.age)
+            }
+        }
         style.getSourceAs<GeoJsonSource>(SRC_PATH)?.setGeoJson(FeatureCollection.fromFeatures(solid + dots))
         style.getSourceAs<GeoJsonSource>(SRC_PATH_GAP)?.setGeoJson(FeatureCollection.fromFeatures(gap))
     }
