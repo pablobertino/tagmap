@@ -5,6 +5,8 @@
 - Compartir tags con otros usuarios (`tracker_shares`, migración 0011): RPC `app_share_tracker` / `app_unshare_tracker` / `app_tracker_shares` / `app_shared_by`; `app_trackers.is_owner`.
 - RLS: invitados leen tracker y posiciones; crean reglas sobre tags visibles con sus propios lugares; "en lugares" se calcula con los lugares de quien consulta.
 - App: diálogo Compartir (dueño), aviso "compartido por" y acciones ocultas para invitados.
+- Alarma "sin señal" (migración 0012): `trackers.stale_alert_hours` (default 12, null = apagada); `check_stale_trackers()` corre en cada `collector_heartbeat`; crea `system_alerts(kind='tracker_stale')` → trigger → Edge Function `notify` (`{"alert_id"}`) → push canal `stale_trackers` con hora local. Una sola alerta por silencio; se reinicia al volver a reportar.
+- App: umbral editable en "Editar tag"; sección Alertas en Eventos; `app_mark_alerts_read`.
 
 ## 0.4.1 — 2026-09-03
 

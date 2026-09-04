@@ -234,6 +234,12 @@ class DetailViewModel(private val c: AppContainer, private val trackerId: String
         }
     }
 
+    fun setStaleAlertHours(hours: Int?) {
+        viewModelScope.launch {
+            runCatching { c.tagRepository.setStaleAlertHours(trackerId, hours) }.onSuccess { load() }
+        }
+    }
+
     // ------------------------------------------------- compartir
 
     fun loadShares() {

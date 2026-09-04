@@ -80,6 +80,21 @@ class PlacesRepository(private val client: SupabaseClient) {
         })
     }
 
+    // ------------------------------------------------------------ alertas de sistema
+
+    suspend fun alerts(limit: Int = 100): List<SystemAlert> =
+        client.postgrest.from("system_alerts").select {
+            order("created_at", Order.DESCENDING)
+            limit(limit.toLong())
+        }.decodeList()
+
+    suspend fun markAlertsRead(ids: List<String>) {
+        if (ids.isEmpty()) return
+        client.postgrest.rpc("app_mark_alerts_read", buildJsonObject {
+            put("p_ids", kotlinx.serialization.json.JsonArray(ids.map { kotlinx.serialization.json.JsonPrimitive(it) }))
+        })
+    }
+
     // ------------------------------------------------- dispositivo / push
 
     suspend fun registerDevice(fcmToken: String, deviceName: String) {

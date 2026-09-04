@@ -9,6 +9,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.pablobertino.tagmap.TagMapApp
 import com.pablobertino.tagmap.data.AppContainer
 import com.pablobertino.tagmap.data.AppEvent
+import com.pablobertino.tagmap.data.SystemAlert
 import com.pablobertino.tagmap.data.AppTracker
 import com.pablobertino.tagmap.data.GeofenceRule
 import com.pablobertino.tagmap.data.Place
@@ -93,6 +94,7 @@ class PlacesViewModel(private val c: AppContainer) : ViewModel() {
 
 data class EventsUiState(
     val events: List<AppEvent> = emptyList(),
+    val alerts: List<SystemAlert> = emptyList(),
     val loading: Boolean = true,
     val error: String? = null,
 )
@@ -106,16 +108,17 @@ class EventsViewModel(private val c: AppContainer) : ViewModel() {
     fun refresh() {
         _ui.update { it.copy(loading = true, error = null) }
         viewModelScope.launch {
-            runCatching { c.placesRepository.events() }
-                .onSuccess { _ui.value = EventsUiState(it, loading = false) }
+            runCatching { c.placesRepository.events() to runCatching { c.placesRepository.alerts() }.getOrDefault(emptyList()) }
+                .onSuccess { (ev, al) -> _ui.value = EventsUiState(ev, al, loading = false) }
                 .onFailure { e -> _ui.update { it.copy(loading = false, error = friendly(e)) } }
         }
     }
 
     fun markAllRead() {
         val ids = _ui.value.events.filter { it.unread }.map { it.id }
+        val alertIds = _ui.value.alerts.filter { it.unread }.map { it.id }
         viewModelScope.launch {
-            runCatching { c.placesRepository.markRead(ids) }.onSuccess { refresh() }
+            runCatching { c.placesRepository.markRead(ids); c.placesRepository.markAlertsRead(alertIds) }.onSuccess { refresh() }
         }
     }
 

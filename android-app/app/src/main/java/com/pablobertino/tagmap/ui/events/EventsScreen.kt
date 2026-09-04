@@ -10,6 +10,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Login
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.DoneAll
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -29,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pablobertino.tagmap.data.AppEvent
+import com.pablobertino.tagmap.data.SystemAlert
 import com.pablobertino.tagmap.ui.EventsViewModel
 import com.pablobertino.tagmap.ui.common.dateTimeText
 
@@ -53,6 +55,11 @@ fun EventsScreen(onBack: () -> Unit, vm: EventsViewModel = viewModel(factory = E
         Box(Modifier.fillMaxSize().padding(padding)) {
             LazyColumn(Modifier.fillMaxSize()) {
                 ui.error?.let { item { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(16.dp)) } }
+                if (ui.alerts.isNotEmpty()) {
+                    item { Text("Alertas", style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(16.dp, 12.dp, 16.dp, 4.dp)) }
+                    items(ui.alerts, key = { "a-" + it.id }) { AlertRow(it) }
+                    item { Text("Llegadas y salidas", style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(16.dp, 12.dp, 16.dp, 4.dp)) }
+                }
                 items(ui.events, key = { it.id }) { EventRow(it) }
                 if (!ui.loading && ui.events.isEmpty()) {
                     item {
@@ -84,6 +91,21 @@ private fun EventRow(e: AppEvent) {
         },
         headlineContent = { Text(title, fontWeight = if (e.unread) FontWeight.Bold else FontWeight.Normal) },
         supportingContent = { Text(detail) },
+    )
+}
+
+@Composable
+private fun AlertRow(a: SystemAlert) {
+    val title = when (a.kind) {
+        "tracker_stale" -> "Tag sin señal"
+        "auth_expired" -> "Recolector: sesión de Google vencida"
+        "collector_error" -> "Recolector con error"
+        else -> a.kind
+    }
+    ListItem(
+        leadingContent = { Icon(Icons.Default.Warning, null, tint = MaterialTheme.colorScheme.error) },
+        headlineContent = { Text(title, fontWeight = if (a.unread) FontWeight.Bold else FontWeight.Normal) },
+        supportingContent = { Text("${a.message ?: ""} · ${a.created.dateTimeText()}") },
     )
 }
 

@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -279,11 +280,12 @@ fun TrackerDetailScreen(
         var name by remember { mutableStateOf(t.name) }
         var icon by remember { mutableStateOf(TagIcon.resolve(t.icon, t.kind).id) }
         var color by remember { mutableStateOf(t.color) }
+        var staleHours by remember { mutableStateOf(t.staleAlertHours) }
         AlertDialog(
             onDismissRequest = { editing = false },
             title = { Text("Editar tag") },
             text = {
-                Column {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
                     OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Nombre") }, singleLine = true)
                     Spacer(Modifier.height(12.dp))
                     Text("Ícono", style = MaterialTheme.typography.labelMedium)
@@ -305,9 +307,25 @@ fun TrackerDetailScreen(
                             )
                         }
                     }
+                    Spacer(Modifier.height(12.dp))
+                    Text("Avisar si no reporta en…", style = MaterialTheme.typography.labelMedium)
+                    Row(Modifier.horizontalScroll(rememberScrollState())) {
+                        listOf(null, 6, 12, 24, 48).forEach { h ->
+                            FilterChip(
+                                selected = staleHours == h, onClick = { staleHours = h },
+                                label = { Text(h?.let { "$it h" } ?: "Nunca") }, modifier = Modifier.padding(end = 6.dp),
+                            )
+                        }
+                    }
                 }
             },
-            confirmButton = { TextButton(onClick = { vm.update(name, icon, color); editing = false }) { Text("Guardar") } },
+            confirmButton = {
+                TextButton(onClick = {
+                    vm.update(name, icon, color)
+                    if (staleHours != t.staleAlertHours) vm.setStaleAlertHours(staleHours)
+                    editing = false
+                }) { Text("Guardar") }
+            },
             dismissButton = { TextButton(onClick = { editing = false }) { Text("Cancelar") } },
         )
     }

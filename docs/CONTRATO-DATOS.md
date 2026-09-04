@@ -60,3 +60,10 @@ Suscribirse a `postgres_changes` en `locations` (INSERT) y `geofence_events` (IN
 - `tracker_shares(tracker_id, user_id, owner_id, created_at)`: solo lectura para dueño e invitado; escritura vía RPC.
 - RPC (`authenticated`): `app_share_tracker(p_tracker_id, p_email) → uuid`, `app_unshare_tracker(p_tracker_id, p_user_id default null)`, `app_tracker_shares(p_tracker_id) → (user_id, email, created_at)`, `app_shared_by() → (tracker_id, owner_email)`.
 - Invitado: SELECT en `trackers`/`locations` de tags compartidos; INSERT en `geofence_rules` sobre tags visibles con lugares propios. Sin UPDATE de tracker, sin `action_requests`, sin borrar historial.
+
+## Adenda 0.5.0 — alarma "sin señal"
+
+- `trackers.stale_alert_hours int` (1–720, null = apagada; default 12). La app lee/escribe solo esa columna. `app_trackers` la expone al final.
+- `system_alerts.tracker_id` nuevo. Kinds: `tracker_stale`, `collector_error`, `auth_expired`. RPC `app_mark_alerts_read(uuid[])`.
+- `check_stale_trackers()` (service_role) se ejecuta dentro de `collector_heartbeat`: una alerta por período de silencio (`trackers.stale_alerted_for` = observed_at ya avisado).
+- Push: trigger `system_alerts_notify` → `notify` con `{"alert_id"}`; canal Android `stale_trackers` / `system`.

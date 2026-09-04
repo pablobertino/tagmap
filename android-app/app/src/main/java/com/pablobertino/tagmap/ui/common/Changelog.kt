@@ -8,6 +8,8 @@ val CHANGELOG = listOf(
         "Compartir tags con otros usuarios por email (ícono Compartir en el detalle).",
         "El invitado ve posición e historial y puede crear sus propios lugares y alarmas; no puede renombrar ni hacer sonar.",
         "Quitar el acceso borra las alarmas del invitado sobre ese tag.",
+        "Alarma 'sin señal': aviso push si un tag no reporta en N horas (12 h por defecto; se cambia en Editar tag).",
+        "Sección Alertas en la pantalla de Eventos.",
     )),
     Release("0.4.1", "2026-09-03", listOf(
         "Notificaciones push operativas (Firebase).",

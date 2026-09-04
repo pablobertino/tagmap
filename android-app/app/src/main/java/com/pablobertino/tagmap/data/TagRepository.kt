@@ -48,6 +48,13 @@ class TagRepository(private val client: SupabaseClient) {
         }
     }
 
+    /** Umbral de la alarma "sin señal" (horas); null la apaga. */
+    suspend fun setStaleAlertHours(id: String, hours: Int?) {
+        client.postgrest.from("trackers").update({
+            if (hours == null) setToNull("stale_alert_hours") else set("stale_alert_hours", hours)
+        }) { filter { eq("id", id) } }
+    }
+
     suspend fun setTrackerEnabled(id: String, enabled: Boolean) {
         client.postgrest.from("trackers").update({ set("enabled", enabled) }) {
             filter { eq("id", id) }

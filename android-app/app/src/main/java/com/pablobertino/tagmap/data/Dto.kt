@@ -25,6 +25,7 @@ data class AppTracker(
     @SerialName("age_minutes") val ageMinutes: Int? = null,
     @SerialName("at_places") val atPlaces: String? = null,
     @SerialName("is_owner") val isOwner: Boolean = true,   // false = tag compartido conmigo
+    @SerialName("stale_alert_hours") val staleAlertHours: Int? = null,   // null = alarma "sin señal" apagada
 ) {
     val hasLocation: Boolean get() = latitude != null && longitude != null
     val observedAt: OffsetDateTime? get() = lastObservedAt?.let { runCatching { OffsetDateTime.parse(it) }.getOrNull() }
@@ -99,6 +100,20 @@ data class AppEvent(
     val observed: OffsetDateTime get() = OffsetDateTime.parse(observedAt)
     val isEntry: Boolean get() = eventType == "ENTRY"
     val unread: Boolean get() = status == "CREATED" || status == "SENT"
+}
+
+/** Alerta de sistema (`tagmap.system_alerts`): tag sin señal, recolector con error. */
+@Serializable
+data class SystemAlert(
+    val id: String,
+    val kind: String,                       // tracker_stale | collector_error | auth_expired
+    val message: String? = null,
+    @SerialName("tracker_id") val trackerId: String? = null,
+    @SerialName("created_at") val createdAt: String,
+    @SerialName("read_at") val readAt: String? = null,
+) {
+    val created: OffsetDateTime get() = OffsetDateTime.parse(createdAt)
+    val unread: Boolean get() = readAt == null
 }
 
 /** Invitado con acceso a un tag (`tagmap.app_tracker_shares`). */
