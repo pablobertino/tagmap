@@ -57,7 +57,7 @@ data class MapMarker(
 data class MapPathPoint(
     val lat: Double, val lon: Double, val gapBefore: Boolean,
     val label: String = "",        // hora del reporte, se muestra junto al punto
-    val age: Float = 0f,           // 0 = más nuevo … 1 = más viejo del rango (sombreado)
+    val colorHex: String? = null,  // color del día (null = color por defecto del estilo)
 )
 
 /** Lugar favorito / geocerca (spec §6.5). */
@@ -255,18 +255,13 @@ private class MapState {
             PropertyFactory.lineDasharray(arrayOf(2f, 2f)),
         ))
         style.addLayer(LineLayer("$SRC_PATH-line", SRC_PATH).withProperties(
-            PropertyFactory.lineColor(pathColor),
+            PropertyFactory.lineColor(Expression.coalesce(Expression.get("color"), Expression.literal(pathColor))),
             PropertyFactory.lineWidth(3f),
             PropertyFactory.lineCap(Property.LINE_CAP_ROUND),
             PropertyFactory.lineJoin(Property.LINE_JOIN_ROUND),
         ))
         style.addLayer(CircleLayer("$SRC_PATH-dots", SRC_PATH).withProperties(
-            // los puntos viejos se ven más pálidos; el más nuevo, lleno
-            PropertyFactory.circleColor(pathColor),
-            PropertyFactory.circleOpacity(Expression.interpolate(
-                Expression.linear(), Expression.coalesce(Expression.get("age"), Expression.literal(0f)),
-                Expression.stop(0f, 1f), Expression.stop(1f, 0.35f),
-            )),
+            PropertyFactory.circleColor(Expression.coalesce(Expression.get("color"), Expression.literal(pathColor))),
             PropertyFactory.circleRadius(4f),
             PropertyFactory.circleStrokeColor(halo),
             PropertyFactory.circleStrokeWidth(1f),
@@ -341,16 +336,20 @@ private class MapState {
             }
         }))
 
+        // Solo se unen reportes seguidos; con hueco largo (gapBefore) no se dibuja nada:
+        // no sabemos por dónde pasó, y una línea sugeriría un camino inexistente.
         val solid = mutableListOf<Feature>()
-        val gap = mutableListOf<Feature>()
+        val gap = emptyList<Feature>()
         path.zipWithNext { a, b ->
-            val line = LineString.fromLngLats(listOf(Point.fromLngLat(a.lon, a.lat), Point.fromLngLat(b.lon, b.lat)))
-            (if (b.gapBefore) gap else solid).add(Feature.fromGeometry(line))
+            if (!b.gapBefore) {
+                val line = LineString.fromLngLats(listOf(Point.fromLngLat(a.lon, a.lat), Point.fromLngLat(b.lon, b.lat)))
+                solid.add(Feature.fromGeometry(line).apply { b.colorHex?.let { addStringProperty("color", it) } })
+            }
         }
         val dots = path.map { p ->
             Feature.fromGeometry(Point.fromLngLat(p.lon, p.lat)).apply {
                 addStringProperty("t", p.label)
-                addNumberProperty("age", p.age)
+                p.colorHex?.let { addStringProperty("color", it) }
             }
         }
         style.getSourceAs<GeoJsonSource>(SRC_PATH)?.setGeoJson(FeatureCollection.fromFeatures(solid + dots))

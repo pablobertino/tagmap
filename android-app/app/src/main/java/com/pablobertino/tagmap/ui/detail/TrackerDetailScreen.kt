@@ -88,6 +88,9 @@ import java.time.format.DateTimeFormatter
 /** Hueco entre reportes a partir del cual el tramo se dibuja discontinuo (spec §13). */
 private const val GAP_HOURS = 3L
 
+/** Colores para los días anteriores al más reciente en el recorrido (el día más reciente usa el color del tag). */
+val DAY_COLORS = listOf("#E53935", "#8E24AA", "#00ACC1", "#FB8C00", "#43A047", "#3949AB", "#6D4C41", "#546E7A")
+
 val TAG_COLORS = listOf("#1E88E5", "#E53935", "#43A047", "#FB8C00", "#8E24AA", "#00ACC1", "#6D4C41", "#546E7A")
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -107,16 +110,22 @@ fun TrackerDetailScreen(
     val isOwner = t?.isOwner != false
     LaunchedEffect(t?.id, t?.isOwner) { if (t != null) vm.loadShares() }
 
-    val multiDay = ui.points.size > 1 &&
-        ui.points.first().observed.atZoneSameInstant(java.time.ZoneId.systemDefault()).toLocalDate() !=
-        ui.points.last().observed.atZoneSameInstant(java.time.ZoneId.systemDefault()).toLocalDate()
+    // Un color por día: el más reciente usa el color del tag; los anteriores, una paleta fija.
+    val zone = java.time.ZoneId.systemDefault()
+    val localDays = ui.points.map { it.observed.atZoneSameInstant(zone).toLocalDate() }
+    val days = localDays.distinct().sortedDescending()
+    val newestColor = t?.color ?: DAY_COLORS[0]
+    val others = DAY_COLORS.filter { !it.equals(newestColor, ignoreCase = true) }
+    val dayColor: Map<LocalDate, String> = days.mapIndexed { i, d ->
+        d to (if (i == 0) newestColor else others[(i - 1) % others.size])
+    }.toMap()
+    val multiDay = days.size > 1
     val path = ui.points.mapIndexed { i, p ->
         val gap = i > 0 && Duration.between(ui.points[i - 1].observed, p.observed).toHours() >= GAP_HOURS
-        val local = p.observed.atZoneSameInstant(java.time.ZoneId.systemDefault())
         MapPathPoint(
             p.latitude, p.longitude, gap,
-            label = local.format(if (multiDay) dmHmFmt else hmFmt),
-            age = if (ui.points.size > 1) 1f - i.toFloat() / (ui.points.size - 1) else 0f,
+            label = p.observed.atZoneSameInstant(zone).format(if (multiDay) dmHmFmt else hmFmt),
+            colorHex = dayColor[localDays[i]],
         )
     }
     val marker = t?.takeIf { it.hasLocation }?.let {
@@ -223,12 +232,23 @@ fun TrackerDetailScreen(
                     action = { TextButton(onClick = vm::clearSoundStatus) { Text("OK") } }) { Text(it) }
             }
 
+            if (multiDay) {
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    days.forEach { d ->
+                        Box(Modifier.size(10.dp).background(parseHexColor(dayColor[d]!!), CircleShape))
+                        Spacer(Modifier.size(4.dp))
+                        Text(d.format(dmFmt), style = MaterialTheme.typography.labelSmall)
+                        Spacer(Modifier.size(12.dp))
+                    }
+                }
+            }
             Text(
                 buildString {
                     append("${ui.points.size} detecciones · ≈${distanceText(ui.distanceM)} sumando líneas rectas entre ellas.\n")
                     append("La red solo reporta cuando pasa un teléfono cerca: no es el camino real. ")
-                    append("Línea llena = menos de ${GAP_HOURS} h entre reportes; punteada = hueco mayor. ")
-                    append("Puntos pálidos = más viejos; la hora aparece al acercar el mapa.")
+                    append("Solo se unen reportes con menos de ${GAP_HOURS} h entre sí; si pasó más tiempo, los puntos quedan sueltos. ")
+                    append("Cada día tiene su color; la hora de cada punto aparece al acercar el mapa.")
                 },
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,

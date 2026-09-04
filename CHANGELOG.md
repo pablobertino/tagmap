@@ -7,7 +7,7 @@
 - App: diálogo Compartir (dueño), aviso "compartido por" y acciones ocultas para invitados.
 - Alarma "sin señal" (migración 0012): `trackers.stale_alert_hours` (default 12, null = apagada); `check_stale_trackers()` corre en cada `collector_heartbeat`; crea `system_alerts(kind='tracker_stale')` → trigger → Edge Function `notify` (`{"alert_id"}`) → push canal `stale_trackers` con hora local. Una sola alerta por silencio; se reinicia al volver a reportar.
 - App: umbral editable en "Editar tag"; sección Alertas en Eventos; `app_mark_alerts_read`.
-- Historial: presets por días de calendario; en el mapa cada punto muestra la hora (zoom ≥ 12) y se atenúa por antigüedad; leyenda de línea llena/punteada.
+- Historial: presets por días de calendario; un color por día en el mapa (el más reciente con el color del tag), hora en cada punto (zoom ≥ 12); sin línea entre reportes separados por más de 3 h.
 - Recolector multi-cuenta: `python -m tagmap_collector.multi` corre una cuenta de Google por subproceso; los workflows lo usan.
 - Cuentas autoservicio (migración 0013): `tagmap.google_accounts` + Supabase Vault; RPC `app_register_google_account` / `app_remove_google_account` / `app_google_account` (usuario) y `collector_list_accounts` (service_role). El recolector recarga las cuentas en cada ciclo. Respaldo: `GFMT_ACCOUNTS_B64` (`phase0/pack_accounts.py`) o `GFMT_SECRETS_B64`.
 - Herramienta `tagmap_auth` (`python -m tagmap_auth`, empaquetable con `build_tagmap_auth.ps1`): login TagMap → flujo Chrome del vendor → sube `secrets.json` cifrado y lo borra de la PC.

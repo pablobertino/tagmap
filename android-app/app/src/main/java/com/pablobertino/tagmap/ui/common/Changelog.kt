@@ -11,7 +11,7 @@ val CHANGELOG = listOf(
         "Alarma 'sin señal': aviso push si un tag no reporta en N horas (12 h por defecto; se cambia en Editar tag).",
         "Sección Alertas en la pantalla de Eventos.",
         "Historial: 'Hoy' / '3 días' / '7 días' son días de calendario (antes eran últimas 24/72/168 h).",
-        "Recorrido más legible: hora en cada punto al acercar, puntos viejos más pálidos, y explicación de la línea punteada (hueco > 3 h).",
+        "Recorrido más legible: un color por día (hoy con el color del tag), hora en cada punto al acercar; con más de 3 h sin reportes no se dibuja línea.",
     )),
     Release("0.4.1", "2026-09-03", listOf(
         "Notificaciones push operativas (Firebase).",
