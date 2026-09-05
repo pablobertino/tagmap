@@ -13,9 +13,11 @@ Cómo funciona TagMap con varias personas, cada una con su cuenta de Google y su
 
 ### Dar de alta a una persona
 
-1. Supabase → **Authentication → Users → Add user → Create new user**: email, contraseña, marcar **Auto confirm user**. Pasale email y contraseña por un canal privado.
-2. Enviale la app (`TagMap-debug.apk`) y `tagmap-auth.exe` (o indicale que lo corra desde tu PC).
-3. Nada más. Cuando registre su cuenta de Google, en ≤15 min ve sus dispositivos.
+Ella misma crea su usuario con **Crear cuenta** en la web (https://pablobertino.github.io/tagmap/) o en la app. Para que eso funcione sin correo de confirmación (el SMTP gratuito de Supabase no manda mails a terceros), una sola vez: Supabase → **Authentication → Sign In / Providers → Email → apagar "Confirm email"** → Save.
+
+Alternativa manual: Supabase → Authentication → Users → Add user → Create new user (email, contraseña, **Auto confirm user**).
+
+Después solo enviale la app (`TagMap-debug.apk`) y `tagmap-auth.exe`. Cuando registre su cuenta de Google, en ≤15 min ve sus dispositivos.
 
 ### Generar `tagmap-auth.exe` (una vez por versión)
 
@@ -44,9 +46,10 @@ from tagmap.google_accounts g join tagmap.collectors c on c.id = g.collector_id;
 
 ## Para cada usuario
 
-### 1. Instalar la app
+### 1. Crear tu usuario e instalar la app
 
-Instalar `TagMap-debug.apk` (permitir "orígenes desconocidos" si lo pide). Entrar con el email y contraseña que te dio el administrador. Aceptar el permiso de notificaciones.
+1. Entrá a https://pablobertino.github.io/tagmap/ → escribí tu email y una contraseña (mínimo 6 caracteres) → **Crear cuenta**. Ese email y contraseña son tu usuario de TagMap.
+2. Instalá `TagMap-debug.apk` en el teléfono (permitir "orígenes desconocidos" si lo pide) y entrá con el mismo usuario. Aceptá el permiso de notificaciones.
 
 ### 2. Registrar tu cuenta de Google (una vez, en una PC con Windows y Google Chrome)
 

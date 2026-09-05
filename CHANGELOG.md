@@ -1,5 +1,9 @@
 # Changelog — TagMap
 
+## web 0.1.1 — 2026-09-04
+
+- Crear cuenta desde la web y guía breve "¿Cómo registro mis tags?" en el login.
+
 ## web 0.1.0 — 2026-09-04
 
 - Interfaz web en `web/index.html` (sin build: supabase-js + MapLibre GL JS desde CDN), publicada en GitHub Pages por `.github/workflows/pages.yml`.

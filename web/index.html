@@ -86,9 +86,16 @@
     <input id="email" type="email" placeholder="Email" autocomplete="username" required>
     <input id="password" type="password" placeholder="Contraseña" autocomplete="current-password" required>
     <label class="small"><input type="checkbox" id="showPw"> Ver contraseña</label>
-    <button class="primary" type="submit">Entrar</button>
+    <button class="primary" type="submit" id="loginBtn">Entrar</button>
+    <button type="button" id="signupBtn">Crear cuenta</button>
     <div id="loginErr" class="err small"></div>
     <div class="small muted">Las posiciones no son en tiempo real: cada punto es la última detección de la red de Google.</div>
+    <details class="small muted"><summary>¿Cómo registro mis tags?</summary>
+      <ol style="padding-left:18px;margin:6px 0">
+        <li>Creá tu cuenta acá (o en la app) con email y contraseña.</li>
+        <li>En una PC con Windows y Google Chrome, ejecutá <b>tagmap-auth.exe</b> (pedíselo al administrador): entrá con este usuario, iniciá sesión en Google con la cuenta que tiene los tags y confirmá el bloqueo de pantalla del teléfono.</li>
+        <li>En ≤15 min tus dispositivos aparecen acá y en la app.</li>
+      </ol></details>
   </form>
 </div>
 
@@ -129,7 +136,7 @@
 // ============================================================ config
 const SUPABASE_URL = "https://rlaxxavhzrrrmjrkymlm.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_W8ACK0W--geUC-H67-DGpg_JkT67QAu";   // pública por diseño (RLS protege)
-const VERSION = "web 0.1.0";
+const VERSION = "web 0.1.2";
 const GAP_HOURS = 3;
 const RECENT_MIN = 60;
 const DAY_COLORS = ["#E53935","#8E24AA","#00ACC1","#FB8C00","#43A047","#3949AB","#6D4C41","#546E7A"];
@@ -173,6 +180,8 @@ function friendly(e) {
   const m = e?.message || String(e);
   if (/invalid login|invalid_credentials/i.test(m)) return "Email o contraseña incorrectos";
   if (/PGRST106/.test(m)) return "El schema tagmap no está expuesto";
+  if (/already registered|user_already_exists/i.test(m)) return "Ese email ya tiene cuenta: usá Entrar.";
+  if (/password should be at least/i.test(m)) return "La contraseña debe tener al menos 6 caracteres.";
   return m.slice(0, 200);
 }
 function haversine(a, b, c, d) { const r = 6371008.8, t = x => x * Math.PI / 180; const dl = t(c - a), dn = t(d - b); const h = Math.sin(dl/2)**2 + Math.cos(t(a))*Math.cos(t(c))*Math.sin(dn/2)**2; return 2*r*Math.asin(Math.sqrt(h)); }
@@ -196,12 +205,24 @@ $("#loginForm").onsubmit = async e => {
   const { error } = await sb.auth.signInWithPassword({ email: $("#email").value.trim(), password: $("#password").value });
   if (error) $("#loginErr").textContent = friendly(error);
 };
+$("#signupBtn").onclick = async () => {
+  $("#loginErr").textContent = "";
+  const email = $("#email").value.trim(), password = $("#password").value;
+  if (!email || password.length < 6) { $("#loginErr").textContent = "Escribí tu email y una contraseña de al menos 6 caracteres, después tocá Crear cuenta."; return; }
+  const { data, error } = await sb.auth.signUp({ email, password });
+  if (error) { $("#loginErr").textContent = friendly(error); return; }
+  if (!data.session) $("#loginErr").textContent = data.user?.identities?.length === 0 ? "Ese email ya tiene cuenta: usá Entrar." : "Cuenta creada. Si no entra sola, revisá tu correo para confirmarla.";
+};
 $("#logoutBtn").onclick = () => sb.auth.signOut();
+let bootedFor = null;   // supabase avisa SIGNED_IN / TOKEN_REFRESHED varias veces: arrancar una sola vez por usuario
 sb.auth.onAuthStateChange((_ev, session) => {
   S.user = session?.user ?? null;
   $("#login").classList.toggle("hidden", !!S.user);
   $("#app").classList.toggle("hidden", !S.user);
-  if (S.user) boot();
+  if (!S.user) { bootedFor = null; return; }
+  if (bootedFor === S.user.id) return;
+  bootedFor = S.user.id;
+  boot();
 });
 
 // ============================================================ datos
@@ -244,6 +265,8 @@ let map, mapReady = false, pendingFit = null;
 function initMap() {
   map = new maplibregl.Map({ container: "map", style: STYLES[S.style], center: [-58.4, -34.6], zoom: 11, attributionControl: true });
   map.addControl(new maplibregl.ScaleControl({ unit: "metric" }), "bottom-right");
+  map.on("error", e => { const m = e?.error?.message || String(e?.error || e); if (!/tile|Tile|404|abort/i.test(m)) toast("Mapa: " + m, 8000); console.error("map error", e); });
+  window.addEventListener("resize", () => map.resize());
   map.on("style.load", () => { addLayers(); mapReady = true; render(); if (pendingFit) { fitAll(); pendingFit = null; } });
   map.on("click", "tag-circle", e => { const id = e.features[0].properties.id; selectTracker(id); });
   map.on("click", "place-center", e => { S.tab = "places"; renderPanel(); toast(e.features[0].properties.name); });
@@ -527,8 +550,9 @@ async function boot() {
   $("#ver").textContent = VERSION;
   try { await rpc("ensure_profile"); } catch (_) {}
   if (!booted) { booted = true; initMap(); }
+  setTimeout(() => map.resize(), 50);   // el contenedor recién se mostró
   await refresh(true);
-  setInterval(() => { if (S.user && document.visibilityState === "visible") refresh(false); }, 60000);
+  if (!boot.timer) boot.timer = setInterval(() => { if (S.user && document.visibilityState === "visible") refresh(false); }, 60000);
 }
 </script>
 </body>
